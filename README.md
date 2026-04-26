@@ -48,7 +48,11 @@ bun run test
 ## Quick Start
 
 ```ts
-import { CursorAgentService, CursorRunService, liveLayer } from "effect-cursor-sdk";
+import {
+  CursorAgentService,
+  CursorRunService,
+  liveLayer,
+} from "effect-cursor-sdk";
 import { Effect, Stream } from "effect";
 
 const program = Effect.gen(function* () {
@@ -60,6 +64,44 @@ const program = Effect.gen(function* () {
     model: { id: "composer-2" },
     local: { cwd: process.cwd() },
   });
+
+  const run = yield* agents.send(agent, "Explain this repository");
+  const text = yield* runs.collectText(run);
+
+  yield* agents.dispose(agent);
+  return text;
+}).pipe(Effect.provide(liveLayer));
+```
+
+`AgentOptions.apiKey` is a plain string at the SDK boundary. To keep the key in `Redacted` form until that boundary, read `CURSOR_API_KEY` (and optional `CURSOR_MODEL`, `CURSOR_LOCAL_CWD`) with `loadCursorConfig`, then merge into `AgentOptions` with `agentOptionsFromConfig`.
+In a future version, we might drop the plain `AgentOptions` boundary and require all options to be passed through `CursorConfig` / `loadCursorConfig` / `agentOptionsFromConfig`.
+
+Effect’s default `ConfigProvider` reads `process.env`, so you usually do not need to install a custom provider for this.
+
+### Quick start with `loadCursorConfig`
+
+```ts
+import {
+  CursorAgentService,
+  CursorRunService,
+  agentOptionsFromConfig,
+  loadCursorConfig,
+  liveLayer,
+} from "effect-cursor-sdk";
+import { Effect } from "effect";
+
+const program = Effect.gen(function* () {
+  const agents = yield* CursorAgentService;
+  const runs = yield* CursorRunService;
+
+  const config = yield* loadCursorConfig;
+  const agent = yield* agents.create(
+    // Flexible: use the config from the environment, and override with local options.
+    agentOptionsFromConfig(config, {
+      model: { id: "composer-2" },
+      local: { cwd: process.cwd() },
+    }),
+  );
 
   const run = yield* agents.send(agent, "Explain this repository");
   const text = yield* runs.collectText(run);
@@ -101,7 +143,9 @@ const agent =
     apiKey: process.env.CURSOR_API_KEY,
     model: { id: "composer-2" },
     cloud: {
-      repos: [{ url: "https://github.com/your-org/your-repo", startingRef: "main" }],
+      repos: [
+        { url: "https://github.com/your-org/your-repo", startingRef: "main" },
+      ],
       autoCreatePR: true,
     },
   });
@@ -133,7 +177,8 @@ Use `CursorInspectionService` for agent/run listings, messages, lifecycle operat
 ```ts
 const inspection = yield * CursorInspectionService;
 
-const agents = yield * inspection.listAgents({ runtime: "cloud", includeArchived: true });
+const agents =
+  yield * inspection.listAgents({ runtime: "cloud", includeArchived: true });
 const models = yield * inspection.listModels();
 const repos = yield * inspection.listRepositories();
 ```

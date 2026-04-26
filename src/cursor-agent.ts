@@ -20,6 +20,17 @@ import type {
   SendOptions,
 } from "./cursor-types";
 
+/**
+ * Agent lifecycle surface backed by the Cursor SDK.
+ *
+ * @remarks
+ * **API boundary notice:** `create`, `resume`, `prompt`, and `scoped` currently
+ * accept raw {@link AgentOptions} (including a plain `apiKey` string). A future
+ * major version may require options to flow through Effectful {@link CursorConfig}
+ * with {@link loadCursorConfig} and {@link agentOptionsFromConfig} instead of
+ * passing `AgentOptions` at this boundary. Prefer the config path for new code;
+ * see the package README.
+ */
 export interface CursorAgentServiceShape {
   readonly create: (
     options: AgentOptions,
@@ -127,6 +138,11 @@ export interface CursorAgentServiceShape {
  *
  * @see {@link CursorRunService} for operations on returned `Run` handles.
  * @see {@link CursorSdkFactory} for replacing SDK construction in tests.
+ *
+ * @remarks
+ * Inherits the **API boundary notice** on {@link CursorAgentServiceShape} about
+ * a possible future switch from raw {@link AgentOptions} to
+ * {@link loadCursorConfig} / {@link agentOptionsFromConfig}.
  *
  * @category services
  */

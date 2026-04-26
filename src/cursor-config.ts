@@ -37,6 +37,13 @@ export type CursorLocalCwd = typeof CursorLocalCwd.Type;
  * Use {@link agentOptionsFromConfig} to merge those defaults into SDK-owned
  * {@link AgentOptions}.
  *
+ * @remarks
+ * **Forward path:** A future major version of this package may require all
+ * agent-related options to be supplied through this module (for example
+ * {@link loadCursorConfig} plus {@link agentOptionsFromConfig}) instead of raw
+ * {@link AgentOptions} on {@link CursorAgentService}.
+ * Prefer this path for new code.
+ *
  * @example
  * ```ts
  * const config = new CursorConfig({
@@ -102,6 +109,11 @@ export const cursorConfig = Config.all({
  * @see {@link CursorConfig}
  * @see {@link AgentOptions}
  *
+ * @remarks
+ * Same **forward path** notice as {@link CursorConfig}: this merge is the
+ * intended boundary for redacted keys and env defaults ahead of a possible
+ * requirement to use it for all agent entry points.
+ *
  * @category config
  */
 export const agentOptionsFromConfig = (
@@ -135,6 +147,11 @@ export const agentOptionsFromConfig = (
  *
  * @see {@link cursorConfig}
  * @see {@link agentOptionsFromConfig}
+ *
+ * @remarks
+ * Same **forward path** notice as {@link CursorConfig}: this effect is the
+ * intended entry for redacted env defaults ahead of a possible requirement to
+ * use it (with {@link agentOptionsFromConfig}) for all agent entry points.
  *
  * @category config
  */

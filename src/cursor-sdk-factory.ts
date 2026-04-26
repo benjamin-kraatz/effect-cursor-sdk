@@ -57,6 +57,13 @@ import type { CursorRunService } from "./cursor-run";
  * @see {@link CursorInspectionService} for static agent and account APIs.
  * @see {@link CursorArtifactService} for artifact APIs on an SDK agent.
  *
+ * @remarks
+ * **API boundary notice:** `create`, `resume`, and `prompt` take raw
+ * {@link AgentOptions} today; the same possible future change described on
+ * {@link CursorAgentServiceShape} may apply here. Prefer
+ * {@link loadCursorConfig} with {@link agentOptionsFromConfig} before calling
+ * these methods when wiring production code.
+ *
  * @category services
  */
 export interface CursorSdkFactoryShape {
