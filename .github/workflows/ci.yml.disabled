@@ -28,9 +28,6 @@ jobs:
       - name: Lint (oxlint)
         run: bun run lint
 
-      - name: Format check (oxfmt)
-        run: bun run format:check
-
       - name: Lint (package)
         run: bun run lint:package
 
