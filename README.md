@@ -138,8 +138,7 @@ Cloud options are passed through as SDK `AgentOptions`:
 
 ```ts
 const agent =
-  yield *
-  agents.create({
+  yield* agents.create({
     apiKey: process.env.CURSOR_API_KEY,
     model: { id: "composer-2" },
     cloud: {
@@ -158,16 +157,13 @@ const agent =
 ```ts
 const run = yield * agents.send(agent, "Refactor the auth module");
 
-yield *
-  runs
-    .streamEvents(run)
-    .pipe(
-      Stream.runForEach((event) =>
-        event.type === "assistant"
-          ? Effect.sync(() => console.log(event.message.content))
-          : Effect.void,
-      ),
-    );
+yield* runs.streamEvents(run).pipe(
+  Stream.runForEach((event) =>
+    event.type === "assistant"
+      ? Effect.sync(() => console.log(event.message.content))
+      : Effect.void,
+  ),
+);
 ```
 
 ## Inspection And Metadata
@@ -177,8 +173,7 @@ Use `CursorInspectionService` for agent/run listings, messages, lifecycle operat
 ```ts
 const inspection = yield * CursorInspectionService;
 
-const agents =
-  yield * inspection.listAgents({ runtime: "cloud", includeArchived: true });
+const agents = yield* inspection.listAgents({ runtime: "cloud", includeArchived: true });
 const models = yield * inspection.listModels();
 const repos = yield * inspection.listRepositories();
 ```
@@ -200,6 +195,9 @@ program.pipe(
 Live service methods are wrapped with operation spans such as `cursor.agent.create`, `cursor.run.wait`, and `cursor.artifacts.download`. The package also exports metrics for operation starts, failures, and stream events, plus `redact` for safe metadata handling.
 
 Never log API keys, MCP credentials, authorization headers, or prompt image data. The provided redaction helper treats those as sensitive by default.
+
+> [!WARNING]
+> The [redaction helper](./src/cursor-telemetry.ts#177) is a best-effort redactor for logs and attributes — not a cryptographic guarantee; do not rely on it for compliance redaction without review.
 
 ## Mocks And Tests
 
