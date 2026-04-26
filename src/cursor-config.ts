@@ -1,6 +1,33 @@
-import { Config, ConfigProvider, Effect, Option, Schema } from "effect";
+import { Config, ConfigProvider, Effect, Option, Redacted, Schema } from "effect";
 
 import type { AgentOptions, ModelSelection } from "./cursor-types";
+
+/**
+ * Branded secret material for the Cursor API key.
+ *
+ * Values are held inside {@link Redacted} on {@link CursorConfig}; this schema
+ * only brands the decoded plaintext type so it cannot be confused with other
+ * strings at the type level.
+ */
+export const CursorApiKey = Schema.Redacted(Schema.String).pipe(Schema.brand("CursorApiKey"));
+export type CursorApiKey = typeof CursorApiKey.Type;
+
+/**
+ * Branded model identifier from wrapper config.
+ *
+ * Populated from the `CURSOR_MODEL` environment variable when using
+ * {@link loadCursorConfig}.
+ */
+export const CursorModelId = Schema.String.pipe(Schema.brand("CursorModelId"));
+export type CursorModelId = typeof CursorModelId.Type;
+
+/**
+ * Branded local working directory for agent runs.
+ *
+ * Populated from `CURSOR_LOCAL_CWD` when using {@link loadCursorConfig}.
+ */
+export const CursorLocalCwd = Schema.String.pipe(Schema.brand("CursorLocalCwd"));
+export type CursorLocalCwd = typeof CursorLocalCwd.Type;
 
 /**
  * Minimal configuration owned by this wrapper.
@@ -13,9 +40,9 @@ import type { AgentOptions, ModelSelection } from "./cursor-types";
  * @example
  * ```ts
  * const config = new CursorConfig({
- *   apiKey: process.env.CURSOR_API_KEY,
- *   modelId: "composer-2",
- *   cwd: process.cwd()
+ *   apiKey: Redacted.make(CursorApiKey.make(process.env.CURSOR_API_KEY!)),
+ *   modelId: CursorModelId.make("composer-2"),
+ *   cwd: CursorLocalCwd.make(process.cwd())
  * })
  * ```
  *
@@ -25,9 +52,9 @@ import type { AgentOptions, ModelSelection } from "./cursor-types";
  * @category config
  */
 export class CursorConfig extends Schema.Class<CursorConfig>("CursorConfig")({
-  apiKey: Schema.optional(Schema.String),
-  modelId: Schema.optional(Schema.String),
-  cwd: Schema.optional(Schema.String),
+  apiKey: Schema.optional(CursorApiKey),
+  modelId: Schema.optional(CursorModelId),
+  cwd: Schema.optional(CursorLocalCwd),
 }) {}
 
 /**
@@ -49,7 +76,7 @@ export class CursorConfig extends Schema.Class<CursorConfig>("CursorConfig")({
  * @category config
  */
 export const cursorConfig = Config.all({
-  apiKey: Config.string("CURSOR_API_KEY").pipe(Config.option),
+  apiKey: Config.redacted("CURSOR_API_KEY").pipe(Config.option),
   modelId: Config.string("CURSOR_MODEL").pipe(Config.option),
   cwd: Config.string("CURSOR_LOCAL_CWD").pipe(Config.option),
 });
@@ -85,7 +112,7 @@ export const agentOptionsFromConfig = (
     overrides.model ?? (config.modelId ? { id: config.modelId } : undefined);
   return {
     ...overrides,
-    apiKey: overrides.apiKey ?? config.apiKey,
+    apiKey: overrides.apiKey ?? (config.apiKey ? Redacted.value(config.apiKey) : undefined),
     model,
     local:
       (overrides.local ?? config.cwd)
@@ -114,9 +141,12 @@ export const agentOptionsFromConfig = (
 export const loadCursorConfig = Effect.gen(function* () {
   const provider = yield* ConfigProvider.ConfigProvider;
   const raw = yield* cursorConfig.parse(provider);
+  const apiKey = Option.getOrUndefined(raw.apiKey);
+  const modelId = Option.getOrUndefined(raw.modelId);
+  const cwd = Option.getOrUndefined(raw.cwd);
   return new CursorConfig({
-    apiKey: Option.getOrUndefined(raw.apiKey),
-    modelId: Option.getOrUndefined(raw.modelId),
-    cwd: Option.getOrUndefined(raw.cwd),
+    apiKey: apiKey ? CursorApiKey.make(apiKey) : undefined,
+    modelId: modelId !== undefined ? CursorModelId.make(modelId) : undefined,
+    cwd: cwd !== undefined ? CursorLocalCwd.make(cwd) : undefined,
   });
 });
