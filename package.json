@@ -44,6 +44,7 @@
     "format:check": "oxfmt --check .",
     "lint:package": "publint",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "test:watch": "vitest"
   },
   "dependencies": {
@@ -53,6 +54,7 @@
     "@effect/language-service": "^0.85.1",
     "@effect/vitest": "4.0.0-beta.57",
     "@types/bun": "latest",
+    "@vitest/coverage-v8": "^4.1.5",
     "effect": "^4.0.0-beta.57",
     "oxfmt": "^0.46.0",
     "oxlint": "^1.61.0",
