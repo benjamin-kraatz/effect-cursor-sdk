@@ -67,16 +67,100 @@ export const cursorOperationsFailed = Metric.counter("cursor_operations_failed")
  */
 export const cursorStreamEvents = Metric.counter("cursor_stream_events");
 
+/** String substituted for values under sensitive-looking keys. */
+const REDACTED_MARKER = "[redacted]";
+
+/** Replaces non-plain objects (for example `Date`, `Map`) so they are not mistaken for empty `{}`. */
+const OPAQUE_MARKER = "[opaque]";
+
+/** Replaces a value when the same object appears on the recursion stack (true cycles only). */
+const CIRCULAR_MARKER = "[circular]";
+
+/** Replaces nested values when recursion depth exceeds this limit (prevents stack overflow). */
+const MAX_REDACT_DEPTH = 64;
+
+const isPlainObject = (value: object): boolean => {
+  const proto = Object.getPrototypeOf(value);
+  return proto === null || proto === Object.prototype;
+};
+
 /**
- * Deep-clones plain objects and arrays while replacing values under keys that
+ * Lower-cased key substring / equality checks. Substrings such as `key` also
+ * match `apiKey` (and unfortunately unrelated keys like `monkey`); that is an
+ * intentional tradeoff for simple log scrubbing.
+ */
+const isSensitiveKeyName = (normalized: string): boolean => {
+  if (normalized === "authorization" || normalized === "data") return true;
+  return (
+    normalized.includes("key") ||
+    normalized.includes("token") ||
+    normalized.includes("secret") ||
+    normalized.includes("password") ||
+    normalized.includes("passwd") ||
+    normalized.includes("credential") ||
+    normalized.includes("cookie") ||
+    normalized.includes("jwt") ||
+    normalized.includes("bearer")
+  );
+};
+
+const redactInner = (value: unknown, path: Set<object>, depth: number): unknown => {
+  if (depth > MAX_REDACT_DEPTH) {
+    return OPAQUE_MARKER;
+  }
+
+  if (Array.isArray(value)) {
+    if (path.has(value)) {
+      return CIRCULAR_MARKER;
+    }
+    path.add(value);
+    const out = value.map((item) => {
+      return redactInner(item, path, depth + 1);
+    });
+    path.delete(value);
+    return out;
+  }
+
+  if (value === null || typeof value !== "object") {
+    return value;
+  }
+
+  if (!isPlainObject(value)) {
+    return OPAQUE_MARKER;
+  }
+
+  if (path.has(value)) {
+    return CIRCULAR_MARKER;
+  }
+
+  path.add(value);
+  const out = Object.fromEntries(
+    Object.entries(value as Record<string, unknown>).map(([key, item]) => {
+      const normalized = key.toLowerCase();
+      if (isSensitiveKeyName(normalized)) {
+        return [key, REDACTED_MARKER];
+      }
+      return [key, redactInner(item, path, depth + 1)];
+    }),
+  );
+  path.delete(value);
+  return out;
+};
+
+/**
+ * Deep-clones **plain** objects and arrays while replacing values under keys that
  * often carry secrets, bearer material, or large opaque blobs (for example API
- * keys, tokens, `Authorization`, or a generic `data` field).
+ * keys, tokens, passwords, cookies, `Authorization`, or a generic `data` field).
  *
  * Matching is **substring-based on the lower-cased key name** (for example
- * `apiKey`, `CURSOR_API_TOKEN`, `client_secret` all match). Non-object values
- * and `null` pass through unchanged. This is a best-effort redactor for logs and
- * attributes—not a cryptographic guarantee; do not rely on it for compliance
- * redaction without review.
+ * `apiKey`, `CURSOR_API_TOKEN`, `client_secret`, `setCookie` all match). Primitives
+ * and `null` pass through unchanged. Non-plain objects (for example `Date`, `Map`,
+ * class instances) are replaced by `"[opaque]"` so they are not serialized as empty
+ * objects. True circular references in the input are replaced by `"[circular]"`.
+ * Recursion deeper than 64 levels falls back to `"[opaque]"` for the overflow branch.
+ *
+ * This is a best-effort redactor for logs and attributes—not a cryptographic
+ * guarantee; do not rely on it for compliance redaction without review.
  *
  * @param value - Arbitrary JSON-like value to sanitize.
  * @returns A structure of the same shape with sensitive-looking entries replaced
@@ -91,27 +175,7 @@ export const cursorStreamEvents = Metric.counter("cursor_stream_events");
  * @category telemetry
  */
 export const redact = (value: unknown): unknown => {
-  if (Array.isArray(value)) {
-    return value.map((item) => {
-      return redact(item);
-    });
-  }
-  if (value === null || typeof value !== "object") return value;
-  return Object.fromEntries(
-    Object.entries(value).map(([key, item]) => {
-      const normalized = key.toLowerCase();
-      if (
-        normalized.includes("key") ||
-        normalized.includes("token") ||
-        normalized.includes("secret") ||
-        normalized === "authorization" ||
-        normalized === "data"
-      ) {
-        return [key, "[redacted]"];
-      }
-      return [key, redact(item)];
-    }),
-  );
+  return redactInner(value, new Set(), 0);
 };
 
 /**
