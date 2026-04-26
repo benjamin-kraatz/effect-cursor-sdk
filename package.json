@@ -1,0 +1,73 @@
+{
+  "name": "effect-cursor-sdk",
+  "version": "0.1.0",
+  "description": "Effect-based SDK for Cursor integrations",
+  "keywords": [
+    "cursor",
+    "effect",
+    "sdk"
+  ],
+  "homepage": "https://github.com/benjamin-kraatz/effect-cursor-sdk#readme",
+  "bugs": {
+    "url": "https://github.com/benjamin-kraatz/effect-cursor-sdk/issues"
+  },
+  "license": "MIT",
+  "author": "",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/benjamin-kraatz/effect-cursor-sdk.git"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsdown",
+    "prepare": "effect-language-service patch",
+    "prepublishOnly": "bun run build",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "oxlint .",
+    "lint:fix": "oxlint --fix .",
+    "format": "oxfmt .",
+    "format:check": "oxfmt --check .",
+    "lint:package": "publint",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@cursor/february": "^1.0.7"
+  },
+  "devDependencies": {
+    "@effect/language-service": "^0.85.1",
+    "@effect/vitest": "4.0.0-beta.57",
+    "@types/bun": "latest",
+    "effect": "^4.0.0-beta.57",
+    "oxfmt": "^0.46.0",
+    "oxlint": "^1.61.0",
+    "publint": "^0.3.12",
+    "tsdown": "^0.21.10",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.5"
+  },
+  "peerDependencies": {
+    "effect": "^4.0.0-beta.57",
+    "typescript": "^6.0.3"
+  },
+  "peerDependenciesMeta": {
+    "typescript": {
+      "optional": true
+    }
+  }
+}
