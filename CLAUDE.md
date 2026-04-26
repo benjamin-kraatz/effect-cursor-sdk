@@ -6,6 +6,10 @@ Check out the following resources for more information about the SDK:
 - [TypeScript SDK docs](https://cursor.com/docs/api/sdk/typescript)
 - [API v1 docs](https://cursor.com/docs/cloud-agent/api/v1)
 
+The SDK package name is currently called `@cursor/february`.
+
+As long as the release is not officially announced, do NOT publish this package and make sure to keep the repository private.
+
 <!-- effect-solutions:start -->
 
 ## Effect Best Practices
