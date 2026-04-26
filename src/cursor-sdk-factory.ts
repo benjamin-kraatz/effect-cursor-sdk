@@ -20,9 +20,13 @@ import type {
   SDKRepository,
   SDKUser,
 } from "./cursor-types";
-import type { CursorRunService } from "./cursor-run";
+
+/* oxlint-disable eslint/no-unused-vars -- type-only imports anchor TSDoc `{@link …}`; not referenced in code */
+import type { CursorAgentService } from "./cursor-agent";
 import type { CursorArtifactService } from "./cursor-artifacts";
 import type { CursorInspectionService } from "./cursor-inspection";
+import type { CursorRunService } from "./cursor-run";
+/* oxlint-enable eslint/no-unused-vars */
 
 /**
  * Thin boundary around the static `@cursor/february` APIs.
@@ -32,6 +36,8 @@ import type { CursorInspectionService } from "./cursor-inspection";
  * {@link CursorInspectionService}. This factory exists so live code, tests, and
  * user applications can replace SDK construction and static calls without
  * monkey-patching imports.
+ *
+ * So in one line: you probably won't need this.
  *
  * @example
  * ```ts
