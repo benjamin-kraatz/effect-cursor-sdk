@@ -2,13 +2,11 @@
 
 Effect-native access to the unreleased Cursor Cloud Agents TypeScript SDK.
 
-`effect-cursor-sdk` wraps `@cursor/february` with Effect services, layers, scoped resource management, tagged errors, observability hooks, deterministic mocks, and ready-made runtimes. The upstream SDK remains the source of truth for Cursor-owned types; this package adds Effect ergonomics without creating a parallel model that can drift.
-
-> The underlying Cursor SDK is not officially announced yet. Keep this repository private and do not publish this package until Cursor's release status changes.
+`effect-cursor-sdk` wraps `@cursor/sdk` with Effect services, layers, scoped resource management, tagged errors, observability hooks, deterministic mocks, and ready-made runtimes. The upstream SDK remains the source of truth for Cursor-owned types; this package adds Effect ergonomics without creating a parallel model that can drift.
 
 ## Philosophy
 
-- SDK-first: every public `@cursor/february` capability should be usable through this package.
+- SDK-first: every public `@cursor/sdk` capability should be usable through this package.
 - Effect-native: APIs return `Effect`, `Stream`, `Context.Service`, and `Layer` values.
 - Type-preserving: SDK data types are re-exported instead of rebuilt.
 - Resource-safe: scoped helpers make it easy to dispose agents correctly.
@@ -27,7 +25,7 @@ Effect-native access to the unreleased Cursor Cloud Agents TypeScript SDK.
 | `Agent.archive`, `unarchive`, `delete`                                           | `CursorInspectionService`                      |
 | `Cursor.me`, models, repositories                                                | `CursorInspectionService`                      |
 | MCP servers, sub-agents, local/cloud options, model options                      | SDK-owned `AgentOptions` and re-exported types |
-| Local run event helpers and platform helpers                                     | Re-exported from `@cursor/february`            |
+| Local run event helpers and platform helpers                                     | Re-exported from `@cursor/sdk`                 |
 
 ## Install
 
@@ -138,7 +136,8 @@ Cloud options are passed through as SDK `AgentOptions`:
 
 ```ts
 const agent =
-  yield* agents.create({
+  yield *
+  agents.create({
     apiKey: process.env.CURSOR_API_KEY,
     model: { id: "composer-2" },
     cloud: {
@@ -157,13 +156,16 @@ const agent =
 ```ts
 const run = yield * agents.send(agent, "Refactor the auth module");
 
-yield* runs.streamEvents(run).pipe(
-  Stream.runForEach((event) =>
-    event.type === "assistant"
-      ? Effect.sync(() => console.log(event.message.content))
-      : Effect.void,
-  ),
-);
+yield *
+  runs
+    .streamEvents(run)
+    .pipe(
+      Stream.runForEach((event) =>
+        event.type === "assistant"
+          ? Effect.sync(() => console.log(event.message.content))
+          : Effect.void,
+      ),
+    );
 ```
 
 ## Inspection And Metadata
@@ -173,7 +175,8 @@ Use `CursorInspectionService` for agent/run listings, messages, lifecycle operat
 ```ts
 const inspection = yield * CursorInspectionService;
 
-const agents = yield* inspection.listAgents({ runtime: "cloud", includeArchived: true });
+const agents =
+  yield * inspection.listAgents({ runtime: "cloud", includeArchived: true });
 const models = yield * inspection.listModels();
 const repos = yield * inspection.listRepositories();
 ```
@@ -232,7 +235,7 @@ The main exports are:
 - `liveLayer`, `mockLayer`, `liveRuntime`, `makeMockRuntime`
 - `CursorConfig`, `cursorConfig`, `agentOptionsFromConfig`, `loadCursorConfig`
 - tagged Cursor error classes and `mapCursorError`
-- SDK-owned types and utilities re-exported from `@cursor/february`
+- SDK-owned types and utilities re-exported from `@cursor/sdk`
 
 Use generated TypeScript declarations for exact signatures.
 
