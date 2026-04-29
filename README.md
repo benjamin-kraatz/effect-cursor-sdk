@@ -1,7 +1,6 @@
 # effect-cursor-sdk
 
-![npm](https://img.shields.io/npm/v/effect-cursor-sdk) ![License MIT](https://img.shields.io/github/license/benjamin-kraatz/effect-cursor-sdk) ![CI](https://img.shields.io/github/actions/workflow/status/benjamin-kraatz/effect-cursor-sdk/ci.yml)
-
+![npm](https://img.shields.io/npm/v/effect-cursor-sdk) ![License MIT](https://img.shields.io/github/license/benjamin-kraatz/effect-cursor-sdk) ![CI](https://img.shields.io/github/actions/workflow/status/benjamin-kraatz/effect-cursor-sdk/ci.yml) ![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/benjamin-kraatz/effect-cursor-sdk?utm_source=oss&utm_medium=github&utm_campaign=benjamin-kraatz%2Feffect-cursor-sdk&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews)
 
 Effect-native access to the new [Cursor SDK](https://cursor.com/docs/sdk/typescript).
 
@@ -177,6 +176,64 @@ const agents = yield * inspection.listAgents({ runtime: "cloud", includeArchived
 const models = yield * inspection.listModels();
 const repos = yield * inspection.listRepositories();
 ```
+
+## Integrate deeper with Effect
+
+Because every Cursor call is an `Effect`, you compose it like the rest of your program: parallel requests, timeouts, retries, logging, and layers all work the same way.
+
+This agent garden snapshot loads your catalog in parallel, adds a resilient boundary around the batch, logs a safe summary (counts and IDs only — never log API keys), then asks Cursor for a one-shot triage opinion via `prompt`:
+
+```ts
+import {
+  CursorAgentService,
+  CursorInspectionService,
+  liveLayer,
+} from "effect-cursor-sdk";
+import { Effect, Schedule } from "effect";
+
+const agentGardenSnapshot = Effect.gen(function* () {
+  const inspection = yield* CursorInspectionService;
+  const agents = yield* CursorAgentService;
+
+  const catalog = yield* Effect.all(
+    {
+      cloud: inspection.listAgents({ runtime: "cloud", includeArchived: false }),
+      models: inspection.listModels(),
+      repos: inspection.listRepositories(),
+    },
+    { concurrency: "unbounded" },
+  ).pipe(
+    Effect.retry(
+      Schedule.exponential("150 millis").pipe(Schedule.compose(Schedule.recurs(3))),
+    ),
+    Effect.timeout("45 seconds"),
+  );
+
+  yield* Effect.logInfo("Cursor catalog loaded", {
+    cloudAgents: catalog.cloud.items.length,
+    models: catalog.models.length,
+    repos: catalog.repos.length,
+  });
+
+  const triage = yield* agents.prompt(
+    [
+      "You are helping on-call. Here is non-secret inventory:",
+      `- Cloud agents (ids): ${catalog.cloud.items.map((a) => a.agentId).join(", ") || "(none)"}`,
+      `- Models (ids): ${catalog.models.map((m) => m.id).join(", ") || "(none)"}`,
+      `- Repos (urls): ${catalog.repos.map((r) => r.url).join(", ") || "(none)"}`,
+      "In two short sentences: what should we verify first before trusting automation here?",
+    ].join("\n"),
+    {
+      apiKey: process.env.CURSOR_API_KEY,
+      model: { id: "composer-2" },
+    },
+  );
+
+  return triage.result;
+}).pipe(Effect.provide(liveLayer));
+```
+
+Swap `liveLayer` for `mockLayer({ ... })` in tests and the same program shape exercises your orchestration without the network.
 
 ## Errors
 
