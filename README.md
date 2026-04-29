@@ -276,9 +276,9 @@ This repository also includes a Cursor-powered changeset agent for pull requests
 
 The job runs only for same-repository, non-draft PRs because it needs both the `CURSOR_API_KEY` repository secret and write access to the PR branch. Forked PRs should add changesets manually or be handled from a trusted maintainer checkout.
 
-To enable it, add a `CURSOR_API_KEY` repository secret. Optional environment variables are `CURSOR_MODEL` for the Cursor model id and `CHANGESET_BASE_REF` for the diff base. See [Changeset Agent](./docs/changeset-agent.md) for the full architecture, prompt contract, security model, and local usage.
+Other, optional environment variables are `CURSOR_MODEL` for the Cursor model id and `CHANGESET_BASE_REF` for the diff base. See [Changeset Agent](./docs/changeset-agent.md) for the full architecture, prompt contract, security model, and local usage.
 
-On `main`, GitHub Actions uses Changesets to open a version PR when pending Changesets exist. After that PR is merged, the same workflow runs `bun run release` and publishes to NPM with the `NPM_TOKEN` repository secret.
+On `main`, GitHub Actions uses Changesets to open a version PR when pending Changesets exist. After that PR is merged, the same workflow runs `bun run release` and publishes to NPM.
 
 For local release preparation, apply pending Changesets and publish only after the package is approved for public release:
 
