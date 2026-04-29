@@ -9,7 +9,7 @@ import {
   RateLimitError,
   UnknownAgentError,
   UnsupportedRunOperationError,
-} from "@cursor/february";
+} from "@cursor/sdk";
 import { expect, it } from "@effect/vitest";
 import { ConfigProvider, Effect, Layer, Redacted, Stream } from "effect";
 import { vi } from "vitest";
@@ -295,7 +295,7 @@ it.effect("uses mock layer for agent, run, artifact, and inspection services", (
     expect(me.apiKeyName).toBe("mock-key");
     expect(listedAgents.items[0]?.agentId).toBe("mock-agent");
     expect(models[0]?.id).toBe("composer-2");
-    expect(repos[0]?.repository).toContain("example/repo");
+    expect(repos[0]?.url).toContain("example/repo");
   }).pipe(
     Effect.provide(
       mockLayer({
@@ -308,7 +308,7 @@ it.effect("uses mock layer for agent, run, artifact, and inspection services", (
         user: { apiKeyName: "mock-key", userEmail: "mock@example.com", createdAt: "now" },
         models: [{ id: "composer-2", displayName: "Composer 2" }],
         repositories: [
-          { owner: "example", name: "repo", repository: "https://github.com/example/repo" },
+          { url: "https://github.com/example/repo" },
         ],
       }),
     ),
@@ -324,7 +324,7 @@ it.effect("scopes mock agents and disposes them when the scope closes", () =>
         ...failingSdkFactory(new Error("unused")),
         create: (_options: AgentOptions) => {
           scopedAgent = makeMockAgent();
-          return scopedAgent;
+          return Promise.resolve(scopedAgent);
         },
       }),
     );
@@ -403,8 +403,8 @@ it.effect("mock agent closes on explicit disposal", () =>
 it.effect("lowest-level mock SDK factory returns deterministic fixture defaults", () =>
   Effect.gen(function* () {
     const sdk = yield* CursorSdkFactory;
-    const agent = sdk.create({});
-    const resumed = sdk.resume("missing-agent");
+    const agent = yield* Effect.promise(() => sdk.create({}));
+    const resumed = yield* Effect.promise(() => sdk.resume("missing-agent"));
     const promptResult = yield* Effect.promise(() => sdk.prompt("hello"));
     const listedAgents = yield* Effect.promise(() => sdk.listAgents());
     const gotAgent = yield* Effect.promise(() => sdk.getAgent("missing-agent"));
@@ -412,7 +412,7 @@ it.effect("lowest-level mock SDK factory returns deterministic fixture defaults"
     const user = yield* Effect.promise(() => sdk.me());
     const models = yield* Effect.promise(() => sdk.listModels());
     const repos = yield* Effect.promise(() => sdk.listRepositories());
-    const defaultArtifactAgent = sdk.create({});
+    const defaultArtifactAgent = yield* Effect.promise(() => sdk.create({}));
     const defaultArtifacts = yield* Effect.promise(() => defaultArtifactAgent.listArtifacts());
     const defaultArtifactData = yield* Effect.promise(() =>
       defaultArtifactAgent.downloadArtifact("missing.txt"),
@@ -458,13 +458,11 @@ it.effect("live SDK factory delegates to the underlying Cursor SDK", () =>
     const user = { apiKeyName: "live-key", createdAt: "now" };
     const model = { id: "composer-2", displayName: "Composer 2" };
     const repository = {
-      owner: "cursor",
-      name: "repo",
-      repository: "https://github.com/cursor/repo",
+      url: "https://github.com/cursor/repo",
     };
 
-    using create = vi.spyOn(Agent, "create").mockReturnValue(agent);
-    using resume = vi.spyOn(Agent, "resume").mockReturnValue(agent);
+    using create = vi.spyOn(Agent, "create").mockResolvedValue(agent);
+    using resume = vi.spyOn(Agent, "resume").mockResolvedValue(agent);
     using prompt = vi.spyOn(Agent, "prompt").mockResolvedValue({
       id: "live-run",
       status: "finished",
@@ -482,8 +480,8 @@ it.effect("live SDK factory delegates to the underlying Cursor SDK", () =>
     using repositoriesList = vi.spyOn(Cursor.repositories, "list").mockResolvedValue([repository]);
 
     const sdk = yield* CursorSdkFactory;
-    expect(sdk.create({})).toBe(agent);
-    expect(sdk.resume("live-agent")).toBe(agent);
+    expect(yield* Effect.promise(() => sdk.create({}))).toBe(agent);
+    expect(yield* Effect.promise(() => sdk.resume("live-agent"))).toBe(agent);
     expect(yield* Effect.promise(() => sdk.prompt("hello"))).toMatchObject({ id: "live-run" });
     expect(yield* Effect.promise(() => sdk.listAgents())).toEqual({ items: [agentInfo] });
     expect(yield* Effect.promise(() => sdk.listRuns("live-agent"))).toEqual({ items: [run] });
@@ -649,6 +647,7 @@ const makeThrowingAgent = (cause: Error): SDKAgent => {
   return {
     ...agent,
     agentId: agent.agentId,
+    model: agent.model,
     send: async () => {
       throw cause;
     },

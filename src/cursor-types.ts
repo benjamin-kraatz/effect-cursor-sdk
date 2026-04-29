@@ -2,7 +2,7 @@
  * Re-exported Cursor SDK types.
  *
  * `effect-cursor-sdk` deliberately does not rebuild the public data model from
- * `@cursor/february`. The upstream SDK remains the source of truth for agent
+ * `@cursor/sdk`. The upstream SDK remains the source of truth for agent
  * options, run handles, message events, artifacts, MCP definitions, model
  * records, and platform helpers.
  *
@@ -52,7 +52,7 @@ export type {
   SettingSource,
   TextBlock,
   ToolUseBlock,
-} from "@cursor/february";
+} from "@cursor/sdk";
 
 export {
   AuthenticationError,
@@ -74,4 +74,4 @@ export {
   isTerminalLocalRunStreamEvent,
   localRunStreamEventToSdkMessage,
   startLocalRunEventNotifierServer,
-} from "@cursor/february";
+} from "@cursor/sdk";

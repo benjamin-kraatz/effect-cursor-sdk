@@ -156,6 +156,10 @@ export class MockCursorAgent implements SDKAgent {
     this.agentId = fixtures.agentId ?? "mock-agent";
   }
 
+  get model(): AgentOptions["model"] | undefined {
+    return this.fixtures.result?.model;
+  }
+
   async send(_message: string | SDKUserMessage, _options?: SendOptions): Promise<Run> {
     const run = makeMockRun(this.fixtures);
     this.runs.push(run);
@@ -227,11 +231,11 @@ export const makeMockSdkFactoryLayer = (fixtures: CursorMockFixtures = {}) => {
   return Layer.succeed(
     CursorSdkFactory,
     CursorSdkFactory.of({
-      create: (_options: AgentOptions): SDKAgent => {
-        return makeMockAgent(fixtures);
+      create: (_options: AgentOptions): Promise<SDKAgent> => {
+        return Promise.resolve(makeMockAgent(fixtures));
       },
-      resume: (_agentId: string, _options?: Partial<AgentOptions>): SDKAgent => {
-        return makeMockAgent(fixtures);
+      resume: (_agentId: string, _options?: Partial<AgentOptions>): Promise<SDKAgent> => {
+        return Promise.resolve(makeMockAgent(fixtures));
       },
       prompt: async (_message: string, _options?: AgentOptions): Promise<RunResult> => {
         return (

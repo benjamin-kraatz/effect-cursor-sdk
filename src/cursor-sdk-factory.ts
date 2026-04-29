@@ -1,4 +1,4 @@
-import { Agent, Cursor } from "@cursor/february";
+import { Agent, Cursor } from "@cursor/sdk";
 import { Context, Layer } from "effect";
 
 import type {
@@ -29,7 +29,7 @@ import type { CursorRunService } from "./cursor-run";
 /* oxlint-enable eslint/no-unused-vars */
 
 /**
- * Thin boundary around the static `@cursor/february` APIs.
+ * Thin boundary around the static `@cursor/sdk` APIs.
  *
  * Most application code should use {@link CursorAgentService},
  * {@link CursorRunService}, {@link CursorArtifactService}, and
@@ -67,8 +67,8 @@ import type { CursorRunService } from "./cursor-run";
  * @category services
  */
 export interface CursorSdkFactoryShape {
-  readonly create: (options: AgentOptions) => SDKAgent;
-  readonly resume: (agentId: string, options?: Partial<AgentOptions>) => SDKAgent;
+  readonly create: (options: AgentOptions) => Promise<SDKAgent>;
+  readonly resume: (agentId: string, options?: Partial<AgentOptions>) => Promise<SDKAgent>;
   readonly prompt: (message: string, options?: AgentOptions) => Promise<RunResult>;
   readonly listAgents: (options?: ListAgentsOptions) => Promise<ListResult<SDKAgentInfo>>;
   readonly listRuns: (agentId: string, options?: ListRunsOptions) => Promise<ListResult<Run>>;
@@ -87,7 +87,7 @@ export interface CursorSdkFactoryShape {
 }
 
 /**
- * Context service that provides the live `@cursor/february` static API boundary.
+ * Context service that provides the live `@cursor/sdk` static API boundary.
  *
  * Use {@link CursorSdkFactory.Live} in production layers and override the
  * service in tests with {@link makeMockSdkFactoryLayer} or a custom layer.
@@ -109,10 +109,10 @@ export class CursorSdkFactory extends Context.Service<CursorSdkFactory, CursorSd
 ) {
   static readonly Live = Layer.succeed(CursorSdkFactory)(
     CursorSdkFactory.of({
-      create: (options: AgentOptions): SDKAgent => {
+      create: (options: AgentOptions): Promise<SDKAgent> => {
         return Agent.create(options);
       },
-      resume: (agentId: string, options?: Partial<AgentOptions>): SDKAgent => {
+      resume: (agentId: string, options?: Partial<AgentOptions>): Promise<SDKAgent> => {
         return Agent.resume(agentId, options);
       },
       prompt: (message: string, options?: AgentOptions): Promise<RunResult> => {

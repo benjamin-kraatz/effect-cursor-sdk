@@ -1,8 +1,11 @@
 # effect-cursor-sdk
 
-Effect-native access to the unreleased Cursor Cloud Agents TypeScript SDK.
+Effect-native access to the official Cursor Cloud Agents TypeScript SDK.
 
 `effect-cursor-sdk` wraps `@cursor/sdk` with Effect services, layers, scoped resource management, tagged errors, observability hooks, deterministic mocks, and ready-made runtimes. The upstream SDK remains the source of truth for Cursor-owned types; this package adds Effect ergonomics without creating a parallel model that can drift.
+
+> [!WARNING]
+> This project is in early development. While all functionality is available, there is still much room for improvement. Contributions are welcome!
 
 ## Philosophy
 
@@ -46,11 +49,7 @@ bun run test
 ## Quick Start
 
 ```ts
-import {
-  CursorAgentService,
-  CursorRunService,
-  liveLayer,
-} from "effect-cursor-sdk";
+import { CursorAgentService, CursorRunService, liveLayer } from "effect-cursor-sdk";
 import { Effect, Stream } from "effect";
 
 const program = Effect.gen(function* () {
@@ -141,9 +140,7 @@ const agent =
     apiKey: process.env.CURSOR_API_KEY,
     model: { id: "composer-2" },
     cloud: {
-      repos: [
-        { url: "https://github.com/your-org/your-repo", startingRef: "main" },
-      ],
+      repos: [{ url: "https://github.com/your-org/your-repo", startingRef: "main" }],
       autoCreatePR: true,
     },
   });
@@ -175,8 +172,7 @@ Use `CursorInspectionService` for agent/run listings, messages, lifecycle operat
 ```ts
 const inspection = yield * CursorInspectionService;
 
-const agents =
-  yield * inspection.listAgents({ runtime: "cloud", includeArchived: true });
+const agents = yield * inspection.listAgents({ runtime: "cloud", includeArchived: true });
 const models = yield * inspection.listModels();
 const repos = yield * inspection.listRepositories();
 ```

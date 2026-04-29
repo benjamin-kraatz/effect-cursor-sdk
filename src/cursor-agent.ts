@@ -157,7 +157,7 @@ export class CursorAgentService extends Context.Service<
       const create = (options: AgentOptions) => {
         return instrument(
           "agent.create",
-          Effect.try({
+          Effect.tryPromise({
             try: () => sdk.create(options),
             catch: (cause) => {
               return mapCursorError(cause, { operation: "agent.create" });
@@ -169,7 +169,7 @@ export class CursorAgentService extends Context.Service<
       const resume = (agentId: string, options?: Partial<AgentOptions>) => {
         return instrument(
           "agent.resume",
-          Effect.try({
+          Effect.tryPromise({
             try: () => sdk.resume(agentId, options),
             catch: (cause) => {
               return mapCursorError(cause, { operation: "agent.resume", agentId });

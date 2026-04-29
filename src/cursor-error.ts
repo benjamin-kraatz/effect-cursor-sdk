@@ -7,7 +7,7 @@ import {
   RateLimitError,
   UnknownAgentError,
   UnsupportedRunOperationError,
-} from "@cursor/february";
+} from "@cursor/sdk";
 import { Data, Match } from "effect";
 
 import type { RunOperation } from "./cursor-types";
@@ -160,7 +160,7 @@ const retryableFrom = (cause: unknown): boolean => {
 /**
  * Convert any SDK failure into a tagged Effect error.
  *
- * @param cause - Unknown value thrown by `@cursor/february` or JavaScript runtime code.
+ * @param cause - Unknown value thrown by `@cursor/sdk` or JavaScript runtime code.
  * @param context - Safe operation metadata to attach to the tagged error.
  *
  * @example
@@ -231,17 +231,17 @@ export function mapCursorError(cause: unknown, context: CursorErrorContext) {
         helpUrl: error.helpUrl,
       });
     }),
+    Match.when(Match.instanceOf(UnsupportedRunOperationError), (error) => {
+      return new CursorUnsupportedOperationError({
+        ...fields,
+        sdkOperation: error.operation as RunOperation | undefined,
+      });
+    }),
     Match.when(Match.instanceOf(ConfigurationError), () => {
       return new CursorConfigurationError(fields);
     }),
     Match.when(Match.instanceOf(NetworkError), () => {
       return new CursorNetworkError(fields);
-    }),
-    Match.when(Match.instanceOf(UnsupportedRunOperationError), (error) => {
-      return new CursorUnsupportedOperationError({
-        ...fields,
-        sdkOperation: error.operation,
-      });
     }),
     Match.when(Match.instanceOf(UnknownAgentError), () => {
       return new CursorUnknownError(fields);
