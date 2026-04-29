@@ -1,6 +1,6 @@
 # effect-cursor-sdk
 
-![npm](https://img.shields.io/npm/v/effect-cursor-sdk) ![License MIT](https://img.shields.io/github/license/benjamin-kraatz/effect-cursor-sdk) ![CI](https://img.shields.io/github/actions/workflow/status/benjamin-kraatz/effect-cursor-sdk/CI)
+![npm](https://img.shields.io/npm/v/effect-cursor-sdk) ![License MIT](https://img.shields.io/github/license/benjamin-kraatz/effect-cursor-sdk) ![CI](https://img.shields.io/github/actions/workflow/status/benjamin-kraatz/effect-cursor-sdk/ci.yml)
 
 
 Effect-native access to the new [Cursor SDK](https://cursor.com/docs/sdk/typescript).
