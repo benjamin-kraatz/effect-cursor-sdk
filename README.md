@@ -1,6 +1,6 @@
 # effect-cursor-sdk
 
-Effect-native access to the official Cursor Cloud Agents TypeScript SDK.
+Effect-native access to the new [Cursor SDK](https://cursor.com/docs/sdk/typescript).
 
 `effect-cursor-sdk` wraps `@cursor/sdk` with Effect services, layers, scoped resource management, tagged errors, observability hooks, deterministic mocks, and ready-made runtimes. The upstream SDK remains the source of truth for Cursor-owned types; this package adds Effect ergonomics without creating a parallel model that can drift.
 
@@ -33,10 +33,8 @@ Effect-native access to the official Cursor Cloud Agents TypeScript SDK.
 ## Install
 
 ```bash
-bun add effect-cursor-sdk effect
+bun add effect-cursor-sdk effect @cursor/sdk
 ```
-
-This package declares `effect` as a peer dependency and currently uses Effect v4 beta APIs.
 
 For development in this repo:
 
