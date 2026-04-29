@@ -35,8 +35,11 @@
   },
   "scripts": {
     "build": "tsdown",
+    "changeset": "changeset",
     "prepare": "effect-language-service patch",
-    "prepublishOnly": "bun run build",
+    "prepack": "bun run build",
+    "prepublishOnly": "bun run verify:publish",
+    "release": "bun run verify:publish && changeset publish",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "lint": "oxlint .",
     "lint:fix": "oxlint --fix .",
@@ -45,12 +48,19 @@
     "lint:package": "publint",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "version": "changeset version",
+    "verify:publish": "bun run typecheck && bun run lint && bun run test && bun run build && bun run lint:package"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "dependencies": {
     "@cursor/sdk": "^1.0.9"
   },
   "devDependencies": {
+    "@changesets/changelog-github": "^0.6.0",
+    "@changesets/cli": "^2.31.0",
     "@effect/language-service": "^0.85.1",
     "@effect/vitest": "4.0.0-beta.57",
     "@types/bun": "latest",

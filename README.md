@@ -1,5 +1,8 @@
 # effect-cursor-sdk
 
+![npm](https://img.shields.io/npm/v/effect-cursor-sdk) ![License MIT](https://img.shields.io/github/license/benjamin-kraatz/effect-cursor-sdk) ![CI](https://img.shields.io/github/actions/workflow/status/benjamin-kraatz/effect-cursor-sdk/CI)
+
+
 Effect-native access to the new [Cursor SDK](https://cursor.com/docs/sdk/typescript).
 
 `effect-cursor-sdk` wraps `@cursor/sdk` with Effect services, layers, scoped resource management, tagged errors, observability hooks, deterministic mocks, and ready-made runtimes. The upstream SDK remains the source of truth for Cursor-owned types; this package adds Effect ergonomics without creating a parallel model that can drift.
@@ -246,3 +249,30 @@ bun run lint:package
 ```
 
 Coverage is measured with Vitest v8 coverage. The suite focuses on deterministic wrapper behavior; live SDK network paths should be validated separately with credentials and a disposable repository.
+
+## Versioning and Publishing
+
+Use conventional commits for readable history and changelog context:
+
+```bash
+feat: add cursor artifact helpers
+fix: map cursor rate limit errors
+docs: clarify runtime setup
+```
+
+User-facing changes should include a Changeset:
+
+```bash
+bun run changeset
+```
+
+On `main`, GitHub Actions uses Changesets to open a version PR when pending Changesets exist. After that PR is merged, the same workflow runs `bun run release` and publishes to NPM with the `NPM_TOKEN` repository secret.
+
+For local release preparation, apply pending Changesets and publish only after the package is approved for public release:
+
+```bash
+bun run version
+bun run release
+```
+
+`bun run release` runs `typecheck`, `lint`, `test`, `build`, and `publint` before publishing to NPM.
