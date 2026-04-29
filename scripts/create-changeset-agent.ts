@@ -1,6 +1,6 @@
 import { readdir } from "node:fs/promises";
 
-import * as BunServices from "@effect/platform-bun/BunServices";
+import * as NodeServices from "@effect/platform-node/NodeServices";
 import { Effect, Layer } from "effect";
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process";
 
@@ -85,10 +85,13 @@ export function listChangedFiles(baseRef: string, cwd: string) {
  * Lists actual Changesets managed by the repo. `.changeset/README.md` is
  * excluded because it is documentation for the folder, not a release note.
  */
-export async function listChangesets(cwd: string) {
-  const entries = await readdir(`${cwd}/.changeset`, { withFileTypes: true });
-  return changesetFilesFromEntries(
-    entries.map((entry) => ({ name: entry.name, isFile: entry.isFile() })),
+export function listChangesets(cwd: string) {
+  return Effect.tryPromise(() => readdir(`${cwd}/.changeset`, { withFileTypes: true })).pipe(
+    Effect.map((entries) =>
+      changesetFilesFromEntries(
+        entries.map((entry) => ({ name: entry.name, isFile: entry.isFile() })),
+      ),
+    ),
   );
 }
 
@@ -165,7 +168,7 @@ export function makeProgram(env: NodeJS.ProcessEnv = process.env) {
     const baseRef = changesetBaseRefFromEnv(env);
     const cwd = cwdFromEnv(env);
 
-    const before = yield* Effect.promise(() => listChangesets(cwd));
+    const before = yield* listChangesets(cwd);
     const existingChangedChangesets = changedChangesetsFromFiles(
       yield* listChangedFiles(baseRef, cwd),
     );
@@ -199,21 +202,23 @@ export function makeProgram(env: NodeJS.ProcessEnv = process.env) {
     const response = yield* runs.collectText(run);
     yield* Effect.logInfo(response);
 
-    const after = yield* Effect.promise(() => listChangesets(cwd));
+    const after = yield* listChangesets(cwd);
     const created = newChangesets(before, after);
 
     if (created.length === 0) {
-      yield* Effect.logInfo("Cursor agent did not create a changeset.");
+      yield* Effect.logWarning(
+        "\n\n--------------------\n\nCursor agent did not create a changeset.",
+      );
       return;
     }
 
-    yield* Effect.logInfo(`Created changeset: ${created.join(", ")}`);
+    yield* Effect.logInfo(`\n\n--------------------\n\nCreated changeset: ${created.join(", ")}`);
   });
 }
 
 export const program = makeProgram().pipe(
   Effect.scoped,
-  Effect.provide(Layer.mergeAll(liveLayer, BunServices.layer)),
+  Effect.provide(Layer.mergeAll(liveLayer, NodeServices.layer)),
 );
 
 if (import.meta.main) {
