@@ -19,17 +19,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
----
-
-Upstream SDK
-
-This project depends on the Cursor Cloud Agents TypeScript SDK package
-`@cursor/february`. That dependency is licensed and distributed on its own
-terms by Cursor. The MIT license above applies to the original material in this
-repository; it does not grant any rights in Cursor’s SDK or trademarks.
-
-Until Cursor announces a stable public release and licensing for that SDK,
-do not publish this package or otherwise redistribute it in ways that would
-require rights you do not have from Cursor. Confirm upstream license and
-distribution requirements before any public release.

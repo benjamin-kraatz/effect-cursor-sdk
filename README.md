@@ -249,7 +249,3 @@ bun run lint:package
 ```
 
 Coverage is measured with Vitest v8 coverage. The suite focuses on deterministic wrapper behavior; live SDK network paths should be validated separately with credentials and a disposable repository.
-
-## License And Publishing
-
-The repository currently contains a `LICENSE` file, but the Cursor SDK dependency is private alpha software. Do not publish this package or make the repository public until the upstream SDK is officially released and licensing/publishing terms are confirmed.
