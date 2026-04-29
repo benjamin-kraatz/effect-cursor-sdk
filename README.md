@@ -2,22 +2,14 @@
 
 ![npm](https://img.shields.io/npm/v/effect-cursor-sdk) ![License MIT](https://img.shields.io/github/license/benjamin-kraatz/effect-cursor-sdk) ![CI](https://img.shields.io/github/actions/workflow/status/benjamin-kraatz/effect-cursor-sdk/ci.yml)
 
-
 Effect-native access to the new [Cursor SDK](https://cursor.com/docs/sdk/typescript).
 
 `effect-cursor-sdk` wraps `@cursor/sdk` with Effect services, layers, scoped resource management, tagged errors, observability hooks, deterministic mocks, and ready-made runtimes. The upstream SDK remains the source of truth for Cursor-owned types; this package adds Effect ergonomics without creating a parallel model that can drift.
 
+If you want to build with Cursor agents, and you are using Effect, this package is for you.
+
 > [!WARNING]
 > This project is in early development. While all functionality is available, there is still much room for improvement. Contributions are welcome!
-
-## Philosophy
-
-- SDK-first: every public `@cursor/sdk` capability should be usable through this package.
-- Effect-native: APIs return `Effect`, `Stream`, `Context.Service`, and `Layer` values.
-- Type-preserving: SDK data types are re-exported instead of rebuilt.
-- Resource-safe: scoped helpers make it easy to dispose agents correctly.
-- Observable: SDK calls are wrapped in spans and metrics with secret redaction utilities.
-- Testable: mock layers and fixtures let applications test Cursor workflows without network calls.
 
 ## Feature Coverage
 
@@ -32,6 +24,12 @@ Effect-native access to the new [Cursor SDK](https://cursor.com/docs/sdk/typescr
 | `Cursor.me`, models, repositories                                                | `CursorInspectionService`                      |
 | MCP servers, sub-agents, local/cloud options, model options                      | SDK-owned `AgentOptions` and re-exported types |
 | Local run event helpers and platform helpers                                     | Re-exported from `@cursor/sdk`                 |
+
+## Use cases
+
+If you are new to the Cursor SDK, take a look at the [Cursor SDK Cookbook](https://github.com/cursor/cookbook). This cookbook provides some (cool!) examples of what you could do with the SDK.
+
+`effect-cursor-sdk` even [uses itself](#automated-changeset-agent) to spin up a Cursor agent to create changesets for pull requests against `main`! 🤯
 
 ## Install
 
@@ -51,7 +49,7 @@ bun run test
 
 ```ts
 import { CursorAgentService, CursorRunService, liveLayer } from "effect-cursor-sdk";
-import { Effect, Stream } from "effect";
+import { Effect } from "effect";
 
 const program = Effect.gen(function* () {
   const agents = yield* CursorAgentService;
@@ -135,16 +133,16 @@ const program = Effect.scoped(
 Cloud options are passed through as SDK `AgentOptions`:
 
 ```ts
-const agent =
-  yield *
-  agents.create({
-    apiKey: process.env.CURSOR_API_KEY,
-    model: { id: "composer-2" },
-    cloud: {
-      repos: [{ url: "https://github.com/your-org/your-repo", startingRef: "main" }],
-      autoCreatePR: true,
-    },
-  });
+const agent = yield* agents.create({
+  apiKey: process.env.CURSOR_API_KEY,
+  model: { id: "composer-2" },
+  cloud: {
+    repos: [
+      { url: "https://github.com/your-org/your-repo", startingRef: "main" },
+    ],
+    autoCreatePR: true,
+  },
+});
 ```
 
 ## Streaming
@@ -152,18 +150,24 @@ const agent =
 `CursorRunService.streamEvents` preserves SDK event shapes and returns an Effect `Stream`.
 
 ```ts
-const run = yield * agents.send(agent, "Refactor the auth module");
+import { Effect, Stream } from "effect";
 
-yield *
-  runs
-    .streamEvents(run)
-    .pipe(
-      Stream.runForEach((event) =>
-        event.type === "assistant"
-          ? Effect.sync(() => console.log(event.message.content))
-          : Effect.void,
-      ),
-    );
+const run = yield* agents.send(agent, "Refactor the auth module");
+
+yield* runs.streamEvents(run).pipe(
+  Stream.runForEach((event) => {
+    if (event.type !== "assistant") {
+      return Effect.void;
+    }
+
+    const text = event.message.content
+      .filter((block) => block.type === "text")
+      .map((block) => block.text)
+      .join("");
+
+    return Effect.sync(() => console.log(text));
+  }),
+);
 ```
 
 ## Inspection And Metadata
@@ -171,11 +175,11 @@ yield *
 Use `CursorInspectionService` for agent/run listings, messages, lifecycle operations, account metadata, model discovery, and connected repositories.
 
 ```ts
-const inspection = yield * CursorInspectionService;
+const inspection = yield* CursorInspectionService;
 
-const agents = yield * inspection.listAgents({ runtime: "cloud", includeArchived: true });
-const models = yield * inspection.listModels();
-const repos = yield * inspection.listRepositories();
+const agents = yield* inspection.listAgents({ runtime: "cloud", includeArchived: true });
+const models = yield* inspection.listModels();
+const repos = yield* inspection.listRepositories();
 ```
 
 ## Errors
@@ -183,7 +187,7 @@ const repos = yield * inspection.listRepositories();
 SDK failures are mapped into tagged errors such as `CursorAuthenticationError`, `CursorRateLimitError`, `CursorConfigurationError`, `CursorNetworkError`, and `CursorUnsupportedOperationError`. The original SDK error is preserved as `cause`, with safe operation context and retryability where available.
 
 ```ts
-program.pipe(
+const handled = program.pipe(
   Effect.catchTag("CursorRateLimitError", (error) =>
     Effect.logWarning(`Cursor rate limited request: ${error.message}`),
   ),
@@ -265,6 +269,14 @@ User-facing changes should include a Changeset:
 ```bash
 bun run changeset
 ```
+
+### Automated Changeset Agent
+
+This repository also includes a Cursor-powered changeset agent for pull requests against `main`. The workflow in `.github/workflows/changeset-agent.yml` runs `bun run changeset:agent`, starts a scoped local Cursor SDK agent with this package, asks it to inspect the PR diff, and commits a missing `.changeset/*.md` file back to the PR branch when release impact exists.
+
+The job runs only for same-repository, non-draft PRs because it needs both the `CURSOR_API_KEY` repository secret and write access to the PR branch. Forked PRs should add changesets manually or be handled from a trusted maintainer checkout.
+
+To enable it, add a `CURSOR_API_KEY` repository secret. Optional environment variables are `CURSOR_MODEL` for the Cursor model id and `CHANGESET_BASE_REF` for the diff base. See [Changeset Agent](./docs/changeset-agent.md) for the full architecture, prompt contract, security model, and local usage.
 
 On `main`, GitHub Actions uses Changesets to open a version PR when pending Changesets exist. After that PR is merged, the same workflow runs `bun run release` and publishes to NPM with the `NPM_TOKEN` repository secret.
 
