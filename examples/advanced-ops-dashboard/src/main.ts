@@ -4,12 +4,12 @@ import {
   CursorRunService,
   agentOptionsFromConfig,
   cursorStreamEvents,
-  liveLayer,
+  liveRuntime,
   loadCursorConfig,
-  mockLayer,
+  makeMockRuntime,
   redact,
 } from "effect-cursor-sdk";
-import { Effect, Metric, Schedule, Stream } from "effect";
+import { Config, Effect, Metric, Schedule, Stream } from "effect";
 
 import { fixtures } from "./fixtures";
 import { agentSummary, printInventory } from "./render";
@@ -99,7 +99,7 @@ const loadInventory = Effect.gen(function* () {
 
   const inventory = yield* Effect.all(
     {
-      agents: inspection.listAgents({ includeArchived: true }),
+      agents: inspection.listAgents({ runtime: "cloud", includeArchived: true }),
       models: inspection.listModels(),
       repos: inspection.listRepositories(),
       user: inspection.me(),
@@ -157,16 +157,20 @@ const runTriage = (summary: string) =>
 
     return yield* runs.streamEvents(run).pipe(
       Stream.tap(() =>
-        Effect.track(Effect.void, cursorStreamEvents.pipe(Metric.withConstantInput(1))),
+        Effect.void.pipe(
+          Effect.trackSuccesses(cursorStreamEvents.pipe(Metric.withConstantInput(1))),
+        ),
       ),
-      Stream.runFold("", (text, event) =>
-        event.type === "assistant"
-          ? text +
-            event.message.content
-              .filter((block) => block.type === "text")
-              .map((block) => block.text)
-              .join("")
-          : text,
+      Stream.runFold(
+        () => "",
+        (text, event) =>
+          event.type === "assistant"
+            ? text +
+              event.message.content
+                .filter((block) => block.type === "text")
+                .map((block) => block.text)
+                .join("")
+            : text,
       ),
     );
   });
@@ -201,6 +205,56 @@ const runLifecycle = (
     return `${options.lifecycle} completed for ${options.agentId}`;
   });
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
+const messageFromUnknown = (value: object): string => {
+  if ("message" in value && typeof (value as { message: unknown }).message === "string") {
+    return (value as { message: string }).message;
+  }
+  return String(value);
+};
+
+/**
+ * Map SDK / config tagged failures to plain `Error` at the CLI boundary.
+ * Avoids `Effect.catchTag` chains that narrow the error channel in ways that
+ * break inference for `ManagedRuntime.runPromise`.
+ */
+const remapProgramFailure = (error: unknown): Effect.Effect<never, Error, never> => {
+  if (error instanceof Config.ConfigError) {
+    return Effect.fail(new Error(`Environment configuration error: ${error.message}`));
+  }
+  if (isRecord(error) && typeof error._tag === "string") {
+    const msg = messageFromUnknown(error);
+    switch (error._tag) {
+      case "CursorAuthenticationError":
+        return Effect.fail(new Error(`Cursor authentication failed: ${msg}`));
+      case "CursorConfigurationError":
+        return Effect.fail(new Error(`Cursor configuration is invalid: ${msg}`));
+      case "CursorIntegrationNotConnectedError": {
+        const helpUrl = error.helpUrl;
+        const help =
+          typeof helpUrl === "string" && helpUrl.length > 0 ? ` (${helpUrl})` : "";
+        return Effect.fail(new Error(`Cursor integration is not connected: ${msg}${help}`));
+      }
+      case "CursorNetworkError":
+        return Effect.fail(new Error(`Cursor network error: ${msg}`));
+      case "CursorRateLimitError":
+        return Effect.fail(new Error(`Cursor rate limit reached: ${msg}`));
+      case "CursorStreamError":
+        return Effect.fail(new Error(`Cursor run stream error: ${msg}`));
+      case "CursorUnknownError":
+        return Effect.fail(new Error(`Cursor error: ${msg}`));
+      default:
+        break;
+    }
+  }
+  if (error instanceof Error) {
+    return Effect.fail(error);
+  }
+  return Effect.fail(new Error(String(error)));
+};
+
 const program = (options: CliOptions) =>
   Effect.scoped(
     Effect.gen(function* () {
@@ -233,24 +287,7 @@ const program = (options: CliOptions) =>
       const triage = yield* runTriage(rendered);
       return `${rendered}\n\nTriage\n------\n${triage.trim()}`;
     }),
-  ).pipe(
-    Effect.catchTag("CursorAuthenticationError", (error) =>
-      Effect.fail(new Error(`Cursor authentication failed: ${error.message}`)),
-    ),
-    Effect.catchTag("CursorRateLimitError", (error) =>
-      Effect.fail(new Error(`Cursor rate limit reached: ${error.message}`)),
-    ),
-    Effect.catchTag("CursorIntegrationNotConnectedError", (error) =>
-      Effect.fail(
-        new Error(
-          `Cursor integration is not connected: ${error.message}${error.helpUrl ? ` (${error.helpUrl})` : ""}`,
-        ),
-      ),
-    ),
-    Effect.catchTag("CursorConfigurationError", (error) =>
-      Effect.fail(new Error(`Cursor configuration is invalid: ${error.message}`)),
-    ),
-  );
+  ).pipe(Effect.catch(remapProgramFailure));
 
 const options = parseArgs(process.argv.slice(2));
 if (options.help) {
@@ -258,10 +295,10 @@ if (options.help) {
   process.exit(0);
 }
 
-const layer = options.mock ? mockLayer(fixtures) : liveLayer;
+const runtime = options.mock ? makeMockRuntime(fixtures) : liveRuntime;
 
 try {
-  const output = await Effect.runPromise(program(options).pipe(Effect.provide(layer)));
+  const output = await runtime.runPromise(program(options));
   console.log(output);
 } catch (error) {
   console.error(error instanceof Error ? error.message : String(error));
