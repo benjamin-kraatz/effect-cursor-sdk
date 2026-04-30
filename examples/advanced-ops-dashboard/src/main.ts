@@ -9,10 +9,10 @@ import {
   mockLayer,
   redact,
 } from "effect-cursor-sdk";
-import { Effect, Layer, Metric, Schedule, Stream } from "effect";
+import { Effect, Metric, Schedule, Stream } from "effect";
 
-import { mockFixtures } from "./fixtures";
-import { renderAgents, renderMessages, renderModels, renderRepos, renderRuns, renderUser } from "./render";
+import { fixtures } from "./fixtures";
+import { agentSummary, printInventory } from "./render";
 
 type LifecycleAction = "archive" | "unarchive" | "delete";
 
@@ -96,7 +96,6 @@ const readConfirmation = Effect.promise(() => {
 
 const loadInventory = Effect.gen(function* () {
   const inspection = yield* CursorInspectionService;
-  const agents = yield* CursorAgentService;
 
   const inventory = yield* Effect.all(
     {
@@ -120,7 +119,7 @@ const loadInventory = Effect.gen(function* () {
         },
         { concurrency: "unbounded" },
       )
-    : { messages: [], runs: { items: [] } };
+    : undefined;
 
   yield* Effect.logInfo("Cursor inventory loaded", {
     agents: inventory.agents.items.length,
@@ -128,7 +127,14 @@ const loadInventory = Effect.gen(function* () {
     repositories: inventory.repos.length,
   });
 
-  return { ...inventory, ...details, agentsService: agents };
+  return {
+    agents: inventory.agents,
+    messagesByAgent: firstAgentId && details ? ([[firstAgentId, details.messages]] as const) : [],
+    models: inventory.models,
+    repositories: inventory.repos,
+    runsByAgent: firstAgentId && details ? ([[firstAgentId, details.runs]] as const) : [],
+    user: inventory.user,
+  };
 });
 
 const runTriage = (summary: string) =>
@@ -170,7 +176,7 @@ const runLifecycle = (options: Required<Pick<CliOptions, "agentId" | "lifecycle"
     const phrase = confirmationPhrase(options.lifecycle, options.agentId);
 
     console.log("Selected agent:");
-    console.log(renderAgents([agent]));
+    console.log(agentSummary(agent));
     console.log(`Confirmation phrase: ${phrase}`);
 
     const typed = options.confirm ?? (yield* readConfirmation);
@@ -208,21 +214,13 @@ const program = (options: CliOptions) =>
         apiKey: process.env.CURSOR_API_KEY,
         user: inventory.user,
         models: inventory.models.map((model) => model.id),
-        repositories: inventory.repos.map((repo) => repo.url),
+        repositories: inventory.repositories.map((repo) => repo.url),
         agents: inventory.agents.items.map((agent) => agent.agentId),
       });
 
-      const rendered = [
-        renderUser(inventory.user),
-        renderModels(inventory.models),
-        renderRepos(inventory.repos),
-        renderAgents(inventory.agents.items),
-        renderRuns(inventory.runs.items),
-        renderMessages(inventory.messages),
-        "",
-        "Redacted diagnostics:",
-        JSON.stringify(safeSummary, null, 2),
-      ].join("\n\n");
+      yield* printInventory(inventory);
+
+      const rendered = ["Redacted diagnostics:", JSON.stringify(safeSummary, null, 2)].join("\n");
 
       if (!options.triage) return rendered;
 
@@ -254,7 +252,7 @@ if (options.help) {
   process.exit(0);
 }
 
-const layer = options.mock ? mockLayer(mockFixtures) : liveLayer;
+const layer = options.mock ? mockLayer(fixtures) : liveLayer;
 
 try {
   const output = await Effect.runPromise(program(options).pipe(Effect.provide(layer)));
