@@ -233,8 +233,7 @@ const remapProgramFailure = (error: unknown): Effect.Effect<never, Error, never>
         return Effect.fail(new Error(`Cursor configuration is invalid: ${msg}`));
       case "CursorIntegrationNotConnectedError": {
         const helpUrl = error.helpUrl;
-        const help =
-          typeof helpUrl === "string" && helpUrl.length > 0 ? ` (${helpUrl})` : "";
+        const help = typeof helpUrl === "string" && helpUrl.length > 0 ? ` (${helpUrl})` : "";
         return Effect.fail(new Error(`Cursor integration is not connected: ${msg}${help}`));
       }
       case "CursorNetworkError":

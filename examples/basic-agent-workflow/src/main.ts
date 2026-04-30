@@ -32,7 +32,10 @@ if (userArgs[0] === "--download-artifact") {
   prompt = userArgs.join(" ").trim() || defaultPrompt;
 }
 
-function resolveListedArtifact(requested: string, list: ReadonlyArray<SDKArtifact>): string | undefined {
+function resolveListedArtifact(
+  requested: string,
+  list: ReadonlyArray<SDKArtifact>,
+): string | undefined {
   if (list.some((a) => a.path === requested)) return requested;
   const base = requested.replace(/^.*\//, "");
   return list.find((a) => a.path === base || a.path.endsWith(`/${base}`))?.path;
@@ -60,16 +63,14 @@ const program = Effect.scoped(
     });
 
     yield* heading("Assistant stream");
-    yield* runs
-      .streamEvents(run)
-      .pipe(
-        Stream.runForEach((event: SDKMessage) =>
-          Effect.sync(() => {
-            const text = assistantText(event);
-            if (text.length > 0) process.stdout.write(text);
-          }),
-        ),
-      );
+    yield* runs.streamEvents(run).pipe(
+      Stream.runForEach((event: SDKMessage) =>
+        Effect.sync(() => {
+          const text = assistantText(event);
+          if (text.length > 0) process.stdout.write(text);
+        }),
+      ),
+    );
     yield* Effect.sync(() => process.stdout.write("\n"));
 
     const result = yield* runs.wait(run);
@@ -87,7 +88,9 @@ const program = Effect.scoped(
       for (const operation of ["cancel", "conversation"] as const) {
         const supported = runs.supports(run, operation);
         const reason = runs.unsupportedReason(run, operation);
-        console.log(`${operation}: ${supported ? "supported" : `unsupported (${reason ?? "no reason"})`}`);
+        console.log(
+          `${operation}: ${supported ? "supported" : `unsupported (${reason ?? "no reason"})`}`,
+        );
       }
     });
 

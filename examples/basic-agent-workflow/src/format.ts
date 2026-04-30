@@ -10,7 +10,8 @@ export const assistantText = (event: SDKMessage): string => {
 };
 
 export const formatArtifact = (artifact: SDKArtifact): string => {
-  const maybeSize = "size" in artifact && typeof artifact.size === "number" ? ` (${artifact.size} bytes)` : "";
+  const maybeSize =
+    "size" in artifact && typeof artifact.size === "number" ? ` (${artifact.size} bytes)` : "";
   return `- ${artifact.path}${maybeSize}`;
 };
 

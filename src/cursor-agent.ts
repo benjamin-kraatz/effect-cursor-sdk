@@ -31,12 +31,13 @@ import type {
  * {@link CursorAgentServiceShape.scopedFromConfig}
  * so secrets stay in `Redacted` form until {@link agentOptionsFromConfig}
  * merges into SDK {@link AgentOptions}. Plain {@link AgentOptions} entry points
- * are deprecated; see the package README.
+ * are deprecated; see `DEPRECATIONS.md` and the README at the package root.
  */
 export interface CursorAgentServiceShape {
   /**
-   * @deprecated Use {@link CursorAgentServiceShape.createFromConfig} with {@link loadCursorConfig} instead
-   * of passing raw {@link AgentOptions} (including a plain `apiKey` string).
+   * @deprecated Prefer {@link CursorAgentServiceShape.createFromConfig} with {@link loadCursorConfig}
+   * instead of raw {@link AgentOptions} (including a plain `apiKey` string). Next major: `createFromConfig`
+   * is planned to become `create` with the same parameters.
    */
   readonly create: (
     options: AgentOptions,
@@ -51,6 +52,9 @@ export interface CursorAgentServiceShape {
   >;
   /**
    * Create an agent from {@link CursorConfig} and optional SDK overrides.
+   *
+   * @remarks
+   * Next major: planned rename to `create` with the same signature once plain-`AgentOptions` entry points are removed.
    *
    * @see {@link loadCursorConfig}
    * @see {@link agentOptionsFromConfig}
@@ -68,8 +72,8 @@ export interface CursorAgentServiceShape {
     | CursorUnknownError
   >;
   /**
-   * @deprecated Use {@link CursorAgentServiceShape.resumeFromConfig} with {@link loadCursorConfig} instead
-   * of passing raw {@link AgentOptions}.
+   * @deprecated Prefer {@link CursorAgentServiceShape.resumeFromConfig} with {@link loadCursorConfig}
+   * instead of raw {@link AgentOptions}. Next major: `resumeFromConfig` is planned to become `resume` with the same parameters.
    */
   readonly resume: (
     agentId: string,
@@ -85,6 +89,9 @@ export interface CursorAgentServiceShape {
   >;
   /**
    * Resume an agent from {@link CursorConfig} and optional SDK overrides.
+   *
+   * @remarks
+   * Next major: planned rename to `resume` with the same signature once plain-`AgentOptions` entry points are removed.
    *
    * @see {@link loadCursorConfig}
    * @see {@link agentOptionsFromConfig}
@@ -103,8 +110,8 @@ export interface CursorAgentServiceShape {
     | CursorUnknownError
   >;
   /**
-   * @deprecated Use {@link CursorAgentServiceShape.promptFromConfig} with {@link loadCursorConfig} instead
-   * of passing raw {@link AgentOptions}.
+   * @deprecated Prefer {@link CursorAgentServiceShape.promptFromConfig} with {@link loadCursorConfig}
+   * instead of raw {@link AgentOptions}. Next major: `promptFromConfig` is planned to become `prompt` with the same parameters.
    */
   readonly prompt: (
     message: string,
@@ -120,6 +127,9 @@ export interface CursorAgentServiceShape {
   >;
   /**
    * One-shot prompt from {@link CursorConfig} and optional SDK overrides.
+   *
+   * @remarks
+   * Next major: planned rename to `prompt` with the same signature once plain-`AgentOptions` entry points are removed.
    *
    * @see {@link loadCursorConfig}
    * @see {@link agentOptionsFromConfig}
@@ -174,8 +184,8 @@ export interface CursorAgentServiceShape {
     | CursorUnknownError
   >;
   /**
-   * @deprecated Use {@link CursorAgentServiceShape.scopedFromConfig} with {@link loadCursorConfig} instead
-   * of passing raw {@link AgentOptions}.
+   * @deprecated Prefer {@link CursorAgentServiceShape.scopedFromConfig} with {@link loadCursorConfig}
+   * instead of raw {@link AgentOptions}. Next major: `scopedFromConfig` is planned to become `scoped` with the same parameters.
    */
   readonly scoped: (
     options: AgentOptions,
@@ -191,6 +201,9 @@ export interface CursorAgentServiceShape {
   >;
   /**
    * Acquire an agent in a scope from {@link CursorConfig} and optional SDK overrides.
+   *
+   * @remarks
+   * Next major: planned rename to `scoped` with the same signature once plain-`AgentOptions` entry points are removed.
    *
    * @see {@link loadCursorConfig}
    * @see {@link agentOptionsFromConfig}
@@ -240,6 +253,8 @@ export interface CursorAgentServiceShape {
  * Prefer {@link CursorAgentServiceShape.createFromConfig} and related methods
  * with {@link loadCursorConfig}; raw {@link AgentOptions} on
  * {@link CursorAgentServiceShape.create} and siblings are deprecated.
+ * See `DEPRECATIONS.md` at the package root for migration and planned next-major renames
+ * (`createFromConfig` → `create`, etc.).
  *
  * @category services
  */

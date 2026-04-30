@@ -29,7 +29,7 @@ Effect-native access to the new [Cursor SDK](https://cursor.com/docs/sdk/typescr
 | `Agent.list`, `get`, `listRuns`, `getRun`, messages                              | `CursorInspectionService`                      |
 | `Agent.archive`, `unarchive`, `delete`                                           | `CursorInspectionService`                      |
 | `Cursor.me`, models, repositories                                                | `CursorInspectionService`                      |
-| MCP servers, sub-agents, local/cloud options, model options                      | Defaults via `CursorConfig` / `loadCursorConfig`; merged SDK `AgentOptions` (deprecated at agent entry) |
+| MCP servers, sub-agents, local/cloud options, model options                      | Defaults via `CursorConfig` / `loadCursorConfig`; merged SDK `AgentOptions` ([deprecated](./DEPRECATIONS.md) at agent entry) |
 | Local run event helpers and platform helpers                                     | Re-exported from `@cursor/sdk`                 |
 
 ## Install
@@ -310,11 +310,11 @@ const testProgram = Effect.gen(function* () {
 
 The main exports are:
 
-- `CursorAgentService` (prefer `createFromConfig`, `scopedFromConfig`, `promptFromConfig`, `resumeFromConfig` with `loadCursorConfig`)
+- `CursorAgentService` (prefer `createFromConfig`, `scopedFromConfig`, `promptFromConfig`, `resumeFromConfig` with `loadCursorConfig`; plain `AgentOptions` at the agent boundary is [deprecated](./DEPRECATIONS.md))
 - `CursorRunService`
 - `CursorArtifactService`
 - `CursorInspectionService`
-- `CursorSdkFactory`
+- `CursorSdkFactory` ([deprecated for application code](./DEPRECATIONS.md#other-deprecations); low-level tests and overrides)
 - `liveLayer`, `mockLayer`, `liveRuntime`, `makeMockRuntime`
 - `CursorConfig`, `cursorConfig`, `agentOptionsFromConfig`, `loadCursorConfig`
 - tagged Cursor error classes and `mapCursorError`
@@ -335,6 +335,10 @@ bun run lint:package
 ```
 
 Coverage is measured with Vitest v8 coverage. The suite focuses on deterministic wrapper behavior; live SDK network paths should be validated separately with credentials and a disposable repository.
+
+## Deprecations
+
+Whenever you need a single place for what is deprecated, what to use instead, how to migrate, and what may change in the next major (when that is already decided), read **[DEPRECATIONS.md](./DEPRECATIONS.md)**. Pair it with **[CHANGELOG.md](./CHANGELOG.md)** for release-by-release notes; `@deprecated` tags on exported symbols mirror the same intent for day-to-day coding.
 
 ## Versioning and Publishing
 
