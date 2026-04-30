@@ -48,18 +48,9 @@ export const fixtures: CursorMockFixtures = {
     {
       id: "composer-2",
       displayName: "Composer 2",
-      enabled: true,
-      isDefault: true,
     },
   ],
-  repositories: [
-    {
-      url: "https://github.com/example/app",
-      provider: "github",
-      owner: "example",
-      name: "app",
-    },
-  ],
+  repositories: [{ url: "https://github.com/example/app" }],
   user: {
     apiKeyName: "mock-dashboard-key",
     createdAt: "1970-01-01T00:00:00.000Z",

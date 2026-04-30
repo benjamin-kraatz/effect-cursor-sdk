@@ -1,3 +1,4 @@
+import { Effect } from "effect";
 import {
   CursorAgentService,
   CursorRunService,
@@ -6,7 +7,6 @@ import {
   loadCursorConfig,
   makeMockRuntime,
 } from "effect-cursor-sdk";
-import { Effect } from "effect";
 
 interface CliOptions {
   readonly cwd?: string;
@@ -69,16 +69,6 @@ const program = (options: CliOptions) =>
       const run = yield* agents.send(agent, options.prompt);
       return yield* runs.collectText(run);
     }),
-  ).pipe(
-    Effect.catchTag("CursorAuthenticationError", (error) =>
-      Effect.fail(new Error(`Cursor authentication failed: ${error.message}`)),
-    ),
-    Effect.catchTag("CursorRateLimitError", (error) =>
-      Effect.fail(new Error(`Cursor rate limit reached: ${error.message}`)),
-    ),
-    Effect.catchTag("CursorConfigurationError", (error) =>
-      Effect.fail(new Error(`Cursor configuration is invalid: ${error.message}`)),
-    ),
   );
 
 const options = parseArgs(process.argv.slice(2));

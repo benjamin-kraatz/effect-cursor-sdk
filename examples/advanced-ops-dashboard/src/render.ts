@@ -25,29 +25,32 @@ export const printHeading = (title: string) =>
     console.log("-".repeat(title.length));
   });
 
-export const printInventory = (inventory: Inventory) =>
-  Effect.sync(() => {
-    const summary = redact({
-      account: inventory.user,
-      models: inventory.models.map((model) => model.id),
-      repositories: inventory.repositories.map((repo) => repo.url),
-      agents: inventory.agents.items.map((agent) => ({
-        agentId: agent.agentId,
-        name: agent.name,
-        summary: agent.summary,
-      })),
-      runsByAgent: inventory.runsByAgent.map(([agentId, runs]) => ({
-        agentId,
-        runs: runs.items.map((run) => ({ id: run.id, status: run.status })),
-      })),
-      messagesByAgent: inventory.messagesByAgent.map(([agentId, messages]) => ({
-        agentId,
-        messages: messages.length,
-      })),
+export function printInventory(inventory: Inventory) {
+  return Effect.gen(function* () {
+    const summary = yield* Effect.sync(() => {
+      return redact({
+        account: inventory.user,
+        models: inventory.models.map((model) => model.id),
+        repositories: inventory.repositories.map((repo) => repo.url),
+        agents: inventory.agents.items.map((agent) => ({
+          agentId: agent.agentId,
+          name: agent.name,
+          summary: agent.summary,
+        })),
+        runsByAgent: inventory.runsByAgent.map(([agentId, runs]) => ({
+          agentId,
+          runs: runs.items.map((run) => ({ id: run.id, status: run.status })),
+        })),
+        messagesByAgent: inventory.messagesByAgent.map(([agentId, messages]) => ({
+          agentId,
+          messages: messages.length,
+        })),
+      });
     });
-
-    console.log(JSON.stringify(summary, null, 2));
+    const summaryString = yield* Effect.sync(() => JSON.stringify(summary, null, 2));
+    console.log(summaryString);
   });
+}
 
 export const agentSummary = (agent: SDKAgentInfo): string =>
   [
