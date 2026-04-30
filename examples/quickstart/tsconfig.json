@@ -1,0 +1,11 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "rootDir": ".",
+    "paths": {
+      "effect-cursor-sdk": ["../../src/index.ts"]
+    }
+  },
+  "include": ["src/**/*.ts"]
+}
