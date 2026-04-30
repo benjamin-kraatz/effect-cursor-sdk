@@ -180,6 +180,14 @@ it("builds SDK options from wrapper config without replacing overrides", () => {
   ).toMatchObject({
     apiKey: "env-key",
   });
+  expect(
+    agentOptionsFromConfig(
+      { cwd: CursorLocalCwd.make("/repo") },
+      { local: { cwd: undefined as unknown as CursorLocalCwd } },
+    ),
+  ).toMatchObject({
+    local: { cwd: "/repo" },
+  });
   expect(agentOptionsFromConfig(new CursorConfig({}))).toEqual({
     apiKey: undefined,
     local: undefined,
