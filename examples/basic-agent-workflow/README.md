@@ -27,6 +27,7 @@ flowchart TD
 ```bash
 cd examples/basic-agent-workflow
 bun install
+bun run --cwd ../.. build
 cp .env.example .env
 export CURSOR_API_KEY="your-key"
 export CURSOR_MODEL="composer-2"

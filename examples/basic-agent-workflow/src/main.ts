@@ -2,18 +2,41 @@ import {
   CursorAgentService,
   CursorArtifactService,
   CursorRunService,
+  type SDKArtifact,
   type SDKMessage,
   agentOptionsFromConfig,
   liveLayer,
   loadCursorConfig,
 } from "effect-cursor-sdk";
 import { Effect, Stream } from "effect";
+import { writeFileSync } from "node:fs";
 
 import { assistantText, formatArtifact } from "./format";
 
-const prompt =
-  process.argv.slice(2).join(" ") ||
+const defaultPrompt =
   "Review this repository and call out the three most important things a maintainer should verify.";
+
+const userArgs = process.argv.slice(2);
+let downloadArtifactArg: string | undefined;
+let prompt: string;
+
+if (userArgs[0] === "--download-artifact") {
+  const pathArg = userArgs[1];
+  if (!pathArg) {
+    console.error("error: missing path after --download-artifact");
+    process.exit(1);
+  }
+  downloadArtifactArg = pathArg;
+  prompt = userArgs.slice(2).join(" ").trim() || defaultPrompt;
+} else {
+  prompt = userArgs.join(" ").trim() || defaultPrompt;
+}
+
+function resolveListedArtifact(requested: string, list: ReadonlyArray<SDKArtifact>): string | undefined {
+  if (list.some((a) => a.path === requested)) return requested;
+  const base = requested.replace(/^.*\//, "");
+  return list.find((a) => a.path === base || a.path.endsWith(`/${base}`))?.path;
+}
 
 const program = Effect.scoped(
   Effect.gen(function* () {
@@ -78,11 +101,27 @@ const program = Effect.scoped(
       for (const artifact of artifactList) console.log(formatArtifact(artifact));
     });
 
-    const firstArtifact = artifactList[0];
-    if (firstArtifact) {
-      const bytes = yield* artifacts.downloadArtifact(agent, firstArtifact.path);
+    const artifactPath = downloadArtifactArg
+      ? resolveListedArtifact(downloadArtifactArg, artifactList)
+      : artifactList[0]?.path;
+
+    if (downloadArtifactArg && !artifactPath) {
       yield* Effect.sync(() => {
-        console.log(`Downloaded ${firstArtifact.path}: ${bytes.byteLength} bytes`);
+        console.log(`No artifact matching "${downloadArtifactArg}" was found.`);
+      });
+    }
+
+    if (artifactPath) {
+      const bytes = yield* artifacts.downloadArtifact(agent, artifactPath);
+      yield* Effect.sync(() => {
+        console.log(`Downloaded ${artifactPath}: ${bytes.byteLength} bytes`);
+        if (downloadArtifactArg) {
+          const outFile = downloadArtifactArg.includes("/")
+            ? downloadArtifactArg.slice(downloadArtifactArg.lastIndexOf("/") + 1)
+            : downloadArtifactArg;
+          writeFileSync(outFile, bytes);
+          console.log(`Wrote ${outFile}`);
+        }
       });
     }
   }),
