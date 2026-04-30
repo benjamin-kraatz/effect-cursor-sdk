@@ -1,5 +1,13 @@
 # effect-cursor-sdk
 
+## 0.2.1
+
+### Patch Changes
+
+- [#10](https://github.com/benjamin-kraatz/effect-cursor-sdk/pull/10) [`053d4f9`](https://github.com/benjamin-kraatz/effect-cursor-sdk/commit/053d4f9bd4f5da15a7d342cebfb9b2680a7cf4eb) Thanks [@benjamin-kraatz](https://github.com/benjamin-kraatz)! - Bump `@cursor/sdk` to `^1.0.10`, bump `oxfmt` to `^0.47.0`, and refresh `bun.lock`. Add `effect-cursor-sdk` as a workspace self-dependency so Bun resolves the package consistently.
+
+- [`b0d50af`](https://github.com/benjamin-kraatz/effect-cursor-sdk/commit/b0d50af5ced427a0cec43bbe0bf9a15da8911571) Thanks [@benjamin-kraatz](https://github.com/benjamin-kraatz)! - Add root `DEPRECATIONS.md` as the canonical deprecation and next-major migration guide; link from the README and include the file in the published npm package. Extend `CursorAgentService` TSDoc with planned renames (`createFromConfig` → `create`, etc.).
+
 ## 0.2.0
 
 ### Minor Changes
