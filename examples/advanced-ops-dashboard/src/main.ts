@@ -106,7 +106,7 @@ const loadInventory = Effect.gen(function* () {
     },
     { concurrency: "unbounded" },
   ).pipe(
-    Effect.retry(Schedule.exponential("150 millis").pipe(Schedule.compose(Schedule.recurs(3)))),
+    Effect.retry(Schedule.exponential("150 millis").pipe(Schedule.both(Schedule.recurs(3)))),
     Effect.timeout("45 seconds"),
   );
 
@@ -142,7 +142,9 @@ const runTriage = (summary: string) =>
     const config = yield* loadCursorConfig;
     const agents = yield* CursorAgentService;
     const runs = yield* CursorRunService;
-    const agent = yield* agents.scoped(agentOptionsFromConfig(config, { local: { cwd: process.cwd() } }));
+    const agent = yield* agents.scoped(
+      agentOptionsFromConfig(config, { local: { cwd: process.cwd() } }),
+    );
     const run = yield* agents.send(
       agent,
       [
@@ -154,22 +156,24 @@ const runTriage = (summary: string) =>
     );
 
     return yield* runs.streamEvents(run).pipe(
-      Stream.tap(() => Effect.track(Effect.void, cursorStreamEvents.pipe(Metric.withConstantInput(1)))),
-      Stream.runFold(
-        "",
-        (text, event) =>
-          event.type === "assistant"
-            ? text +
-              event.message.content
-                .filter((block) => block.type === "text")
-                .map((block) => block.text)
-                .join("")
-            : text,
+      Stream.tap(() =>
+        Effect.track(Effect.void, cursorStreamEvents.pipe(Metric.withConstantInput(1))),
+      ),
+      Stream.runFold("", (text, event) =>
+        event.type === "assistant"
+          ? text +
+            event.message.content
+              .filter((block) => block.type === "text")
+              .map((block) => block.text)
+              .join("")
+          : text,
       ),
     );
   });
 
-const runLifecycle = (options: Required<Pick<CliOptions, "agentId" | "lifecycle">> & Pick<CliOptions, "confirm">) =>
+const runLifecycle = (
+  options: Required<Pick<CliOptions, "agentId" | "lifecycle">> & Pick<CliOptions, "confirm">,
+) =>
   Effect.gen(function* () {
     const inspection = yield* CursorInspectionService;
     const agent = yield* inspection.getAgent(options.agentId);
@@ -181,7 +185,9 @@ const runLifecycle = (options: Required<Pick<CliOptions, "agentId" | "lifecycle"
 
     const typed = options.confirm ?? (yield* readConfirmation);
     if (typed !== phrase) {
-      return yield* Effect.fail(new Error("Confirmation phrase did not match; no lifecycle action was run."));
+      return yield* Effect.fail(
+        new Error("Confirmation phrase did not match; no lifecycle action was run."),
+      );
     }
 
     if (options.lifecycle === "archive") {
