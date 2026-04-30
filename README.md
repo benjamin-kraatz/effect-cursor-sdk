@@ -65,6 +65,7 @@ const program = Effect.gen(function* () {
 
   const config = yield* loadCursorConfig;
   const agent = yield* agents.createFromConfig(config, {
+    // Override the given config optionally with custom values
     model: { id: "composer-2" },
     local: { cwd: process.cwd() },
   });
@@ -81,7 +82,7 @@ Effect’s default `ConfigProvider` reads `process.env`, so you usually do not n
 
 If you need full control over the merge into SDK options, you can still call `agentOptionsFromConfig` yourself and pass the result to deprecated `create`; prefer `createFromConfig` in application code.
 
-## Deprecated: plain `AgentOptions` at the agent boundary
+## Plain `AgentOptions` at the agent boundary (deprecated)
 
 Passing raw `AgentOptions` (for example `apiKey: process.env.CURSOR_API_KEY`) to `create`, `resume`, `prompt`, or `scoped` is **deprecated**. It still works for compatibility, but prefer the config flow above.
 
