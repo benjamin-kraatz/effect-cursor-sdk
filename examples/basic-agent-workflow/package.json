@@ -1,0 +1,19 @@
+{
+  "name": "effect-cursor-sdk-basic-agent-workflow-example",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --import tsx src/main.ts",
+    "postinstall": "rm -rf node_modules/effect-cursor-sdk && ln -s ../../.. node_modules/effect-cursor-sdk",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@cursor/sdk": "^1.0.9",
+    "effect": "^4.0.0-beta.57"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.3"
+  }
+}

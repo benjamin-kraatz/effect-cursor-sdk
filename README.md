@@ -46,6 +46,24 @@ bun run typecheck
 bun run test
 ```
 
+## Examples
+
+The [`examples`](./examples) directory contains a guided learning path from a
+minimal first script to production-style Effect composition:
+
+| Example | What it demonstrates |
+| --- | --- |
+| [`quickstart`](./examples/quickstart) | First config-first local agent call with `loadCursorConfig`, `agentOptionsFromConfig`, and `collectText`. |
+| [`cli`](./examples/cli) | A small terminal app with `liveRuntime`, offline `makeMockRuntime`, CLI overrides, and tagged error handling. |
+| [`basic-agent-workflow`](./examples/basic-agent-workflow) | Scoped agents, run status listeners, streaming, capability checks, and artifact listing/downloads. |
+| [`advanced-ops-dashboard`](./examples/advanced-ops-dashboard) | Inspection APIs, confirmation-gated lifecycle operations, parallel Effect composition, retries/timeouts, telemetry, redaction, and rich mocks. |
+
+Run all example typechecks from the repo root:
+
+```bash
+bun run examples:typecheck
+```
+
 ## Quick Start
 
 Load environment defaults with `loadCursorConfig`, then create agents with `createFromConfig` (and `scopedFromConfig`, `promptFromConfig`, `resumeFromConfig` as needed). The API key stays in `Redacted` form until the merge step; `AgentOptions.apiKey` remains a plain string at the SDK boundary.
@@ -214,7 +232,7 @@ const agentGardenSnapshot = Effect.gen(function* () {
     { concurrency: "unbounded" },
   ).pipe(
     Effect.retry(
-      Schedule.exponential("150 millis").pipe(Schedule.compose(Schedule.recurs(3))),
+      Schedule.exponential("150 millis").pipe(Schedule.both(Schedule.recurs(3))),
     ),
     Effect.timeout("45 seconds"),
   );
