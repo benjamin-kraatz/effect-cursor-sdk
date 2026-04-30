@@ -138,11 +138,33 @@ export const agentOptionsFromConfig = (
 
 /**
  * Load environment-derived defaults as a schema-backed value.
+ * It uses ConfigProvider to load the environment variables
+ * with their default names (`CURSOR_API_KEY`, `CURSOR_MODEL`, `CURSOR_LOCAL_CWD`)
+ * from {@link cursorConfig}.
  *
  * @example
  * ```ts
  * const config = yield* loadCursorConfig
  * const options = agentOptionsFromConfig(config, { local: { cwd: process.cwd() } })
+ * ```
+ *
+ * To change the way that the environment variables are loaded,
+ * you can do it with Effect by providing a custom ConfigProvider.
+ *
+ * ```ts
+ * // For example: load via custom environment object
+ * const config = yield* loadCursorConfig.pipe(
+ *  Effect.provideService(
+ *    ConfigProvider.ConfigProvider,
+ *    ConfigProvider.fromEnv({
+ *      env: {
+ *        CURSOR_API_KEY: "crsr_******",
+ *        CURSOR_MODEL: "composer-2",
+ *        CURSOR_LOCAL_CWD: "/workspace",
+ *      },
+ *    }),
+ *  ),
+ * )
  * ```
  *
  * @see {@link cursorConfig}
