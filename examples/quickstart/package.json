@@ -1,0 +1,18 @@
+{
+  "name": "effect-cursor-sdk-example-quickstart",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun run src/main.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@cursor/sdk": "^1.0.9",
+    "effect": "^4.0.0-beta.57",
+    "effect-cursor-sdk": "file:../.."
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^6.0.3"
+  }
+}
