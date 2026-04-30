@@ -29,7 +29,7 @@ Effect-native access to the new [Cursor SDK](https://cursor.com/docs/sdk/typescr
 | `Agent.list`, `get`, `listRuns`, `getRun`, messages                              | `CursorInspectionService`                      |
 | `Agent.archive`, `unarchive`, `delete`                                           | `CursorInspectionService`                      |
 | `Cursor.me`, models, repositories                                                | `CursorInspectionService`                      |
-| MCP servers, sub-agents, local/cloud options, model options                      | SDK-owned `AgentOptions` and re-exported types |
+| MCP servers, sub-agents, local/cloud options, model options                      | Defaults via `CursorConfig` / `loadCursorConfig`; merged SDK `AgentOptions` (deprecated at agent entry) |
 | Local run event helpers and platform helpers                                     | Re-exported from `@cursor/sdk`                 |
 
 ## Install
@@ -48,16 +48,24 @@ bun run test
 
 ## Quick Start
 
+Load environment defaults with `loadCursorConfig`, then create agents with `createFromConfig` (and `scopedFromConfig`, `promptFromConfig`, `resumeFromConfig` as needed). The API key stays in `Redacted` form until the merge step; `AgentOptions.apiKey` remains a plain string at the SDK boundary.
+
 ```ts
-import { CursorAgentService, CursorRunService, liveLayer } from "effect-cursor-sdk";
-import { Effect, Stream } from "effect";
+import {
+  CursorAgentService,
+  CursorRunService,
+  loadCursorConfig,
+  liveLayer,
+} from "effect-cursor-sdk";
+import { Effect } from "effect";
 
 const program = Effect.gen(function* () {
   const agents = yield* CursorAgentService;
   const runs = yield* CursorRunService;
 
-  const agent = yield* agents.create({
-    apiKey: process.env.CURSOR_API_KEY,
+  const config = yield* loadCursorConfig;
+  const agent = yield* agents.createFromConfig(config, {
+    // Override the given config optionally with custom values
     model: { id: "composer-2" },
     local: { cwd: process.cwd() },
   });
@@ -70,56 +78,50 @@ const program = Effect.gen(function* () {
 }).pipe(Effect.provide(liveLayer));
 ```
 
-`AgentOptions.apiKey` is a plain string at the SDK boundary. To keep the key in `Redacted` form until that boundary, read `CURSOR_API_KEY` (and optional `CURSOR_MODEL`, `CURSOR_LOCAL_CWD`) with `loadCursorConfig`, then merge into `AgentOptions` with `agentOptionsFromConfig`.
-In a future version, we might drop the plain `AgentOptions` boundary and require all options to be passed through `CursorConfig` / `loadCursorConfig` / `agentOptionsFromConfig`.
-
 Effect’s default `ConfigProvider` reads `process.env`, so you usually do not need to install a custom provider for this.
 
-### Quick start with `loadCursorConfig`
+If you need full control over the merge into SDK options, you can still call `agentOptionsFromConfig` yourself and pass the result to deprecated `create`; prefer `createFromConfig` in application code.
+
+## Plain `AgentOptions` at the agent boundary (deprecated)
+
+Passing raw `AgentOptions` (for example `apiKey: process.env.CURSOR_API_KEY`) to `create`, `resume`, `prompt`, or `scoped` is **deprecated**. It still works for compatibility, but prefer the config flow above.
 
 ```ts
-import {
-  CursorAgentService,
-  CursorRunService,
-  agentOptionsFromConfig,
-  loadCursorConfig,
-  liveLayer,
-} from "effect-cursor-sdk";
+import { CursorAgentService, CursorRunService, liveLayer } from "effect-cursor-sdk";
 import { Effect } from "effect";
 
-const program = Effect.gen(function* () {
+const legacyProgram = Effect.gen(function* () {
   const agents = yield* CursorAgentService;
   const runs = yield* CursorRunService;
 
-  const config = yield* loadCursorConfig;
-  const agent = yield* agents.create(
-    // Flexible: use the config from the environment, and override with local options.
-    agentOptionsFromConfig(config, {
-      model: { id: "composer-2" },
-      local: { cwd: process.cwd() },
-    }),
-  );
+  const agent = yield* agents.create({
+    apiKey: process.env.CURSOR_API_KEY,
+    model: { id: "composer-2" },
+    local: { cwd: process.cwd() },
+  });
 
   const run = yield* agents.send(agent, "Explain this repository");
   const text = yield* runs.collectText(run);
-
   yield* agents.dispose(agent);
   return text;
 }).pipe(Effect.provide(liveLayer));
 ```
 
+Migrate by replacing `agents.create({ ... })` with `const config = yield* loadCursorConfig` and `agents.createFromConfig(config, { ... })` (or the other `*FromConfig` helpers).
+
 ## Scoped Agents
 
-Prefer `scoped` when an agent should be disposed automatically:
+Prefer `scopedFromConfig` when an agent should be disposed automatically:
 
 ```ts
-import { CursorAgentService, liveLayer } from "effect-cursor-sdk";
+import { CursorAgentService, loadCursorConfig, liveLayer } from "effect-cursor-sdk";
 import { Effect } from "effect";
 
 const program = Effect.scoped(
   Effect.gen(function* () {
     const agents = yield* CursorAgentService;
-    const agent = yield* agents.scoped({
+    const config = yield* loadCursorConfig;
+    const agent = yield* agents.scopedFromConfig(config, {
       model: { id: "composer-2" },
       local: { cwd: process.cwd() },
     });
@@ -131,11 +133,11 @@ const program = Effect.scoped(
 
 ## Cloud Agents
 
-Cloud options are passed through as SDK `AgentOptions`:
+Cloud options are merged as SDK overrides on top of loaded config:
 
 ```ts
-const agent = yield* agents.create({
-  apiKey: process.env.CURSOR_API_KEY,
+const config = yield* loadCursorConfig;
+const agent = yield* agents.createFromConfig(config, {
   model: { id: "composer-2" },
   cloud: {
     repos: [
@@ -187,12 +189,13 @@ const repos = yield* inspection.listRepositories();
 
 Because every Cursor call is an `Effect`, you compose it like the rest of your program: parallel requests, timeouts, retries, logging, and layers all work the same way.
 
-This agent garden snapshot loads your catalog in parallel, adds a resilient boundary around the batch, logs a safe summary (counts and IDs only — never log API keys), then asks Cursor for a one-shot triage opinion via `prompt`:
+This agent garden snapshot loads your catalog in parallel, adds a resilient boundary around the batch, logs a safe summary (counts and IDs only — never log API keys), then asks Cursor for a one-shot triage opinion via `promptFromConfig`:
 
 ```ts
 import {
   CursorAgentService,
   CursorInspectionService,
+  loadCursorConfig,
   liveLayer,
 } from "effect-cursor-sdk";
 import { Effect, Schedule } from "effect";
@@ -200,6 +203,7 @@ import { Effect, Schedule } from "effect";
 const agentGardenSnapshot = Effect.gen(function* () {
   const inspection = yield* CursorInspectionService;
   const agents = yield* CursorAgentService;
+  const config = yield* loadCursorConfig;
 
   const catalog = yield* Effect.all(
     {
@@ -221,7 +225,7 @@ const agentGardenSnapshot = Effect.gen(function* () {
     repos: catalog.repos.length,
   });
 
-  const triage = yield* agents.prompt(
+  const triage = yield* agents.promptFromConfig(
     [
       "You are helping on-call. Here is non-secret inventory:",
       `- Cloud agents (ids): ${catalog.cloud.items.map((a) => a.agentId).join(", ") || "(none)"}`,
@@ -229,8 +233,8 @@ const agentGardenSnapshot = Effect.gen(function* () {
       `- Repos (urls): ${catalog.repos.map((r) => r.url).join(", ") || "(none)"}`,
       "In two short sentences: what should we verify first before trusting automation here?",
     ].join("\n"),
+    config,
     {
-      apiKey: process.env.CURSOR_API_KEY,
       model: { id: "composer-2" },
     },
   );
@@ -267,12 +271,13 @@ Never log API keys, MCP credentials, authorization headers, or prompt image data
 Use `mockLayer` for deterministic tests:
 
 ```ts
-import { CursorAgentService, mockLayer } from "effect-cursor-sdk";
+import { CursorAgentService, loadCursorConfig, mockLayer } from "effect-cursor-sdk";
 import { Effect } from "effect";
 
 const testProgram = Effect.gen(function* () {
   const agents = yield* CursorAgentService;
-  const agent = yield* agents.create({ model: { id: "composer-2" } });
+  const config = yield* loadCursorConfig;
+  const agent = yield* agents.createFromConfig(config, { model: { id: "composer-2" } });
   return yield* agents.send(agent, "Hello");
 }).pipe(
   Effect.provide(
@@ -287,7 +292,7 @@ const testProgram = Effect.gen(function* () {
 
 The main exports are:
 
-- `CursorAgentService`
+- `CursorAgentService` (prefer `createFromConfig`, `scopedFromConfig`, `promptFromConfig`, `resumeFromConfig` with `loadCursorConfig`)
 - `CursorRunService`
 - `CursorArtifactService`
 - `CursorInspectionService`

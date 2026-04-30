@@ -185,6 +185,16 @@ it("builds SDK options from wrapper config without replacing overrides", () => {
     local: undefined,
     model: undefined,
   });
+  expect(agentOptionsFromConfig(new CursorConfig({}), { local: {} })).toEqual({
+    apiKey: undefined,
+    local: undefined,
+    model: undefined,
+  });
+  expect(
+    agentOptionsFromConfig({ cwd: CursorLocalCwd.make("/repo") }, { local: {} }),
+  ).toMatchObject({
+    local: { cwd: "/repo" },
+  });
 });
 
 it.effect("loads Cursor config from an Effect config provider", () =>
@@ -214,6 +224,106 @@ it.effect("loads empty Cursor config when environment variables are absent", () 
     const config = yield* loadCursorConfig;
     expect(config).toEqual(new CursorConfig({}));
   }).pipe(Effect.provideService(ConfigProvider.ConfigProvider, ConfigProvider.fromUnknown({}))),
+);
+
+it.effect("config-based agent methods merge CursorConfig into SDK factory options", () =>
+  Effect.gen(function* () {
+    let createOptions: AgentOptions | undefined;
+    let resumeCall: { agentId: string; options?: Partial<AgentOptions> } | undefined;
+    let promptCall: { message: string; options?: AgentOptions } | undefined;
+
+    const config = new CursorConfig({
+      apiKey: CursorApiKey.make(Redacted.make("env-key")),
+      modelId: CursorModelId.make("from-env"),
+      cwd: CursorLocalCwd.make("/repo"),
+    });
+
+    const sdkLayer = Layer.succeed(
+      CursorSdkFactory,
+      CursorSdkFactory.of({
+        create: (options: AgentOptions) => {
+          createOptions = options;
+          return Promise.resolve(makeMockAgent());
+        },
+        resume: (agentId: string, options?: Partial<AgentOptions>) => {
+          resumeCall = { agentId, options };
+          return Promise.resolve(makeMockAgent());
+        },
+        prompt: async (message: string, options?: AgentOptions) => {
+          promptCall = { message, options };
+          return { id: "p-run", status: "finished" as const, result: "ok" };
+        },
+        listAgents: async () => ({ items: [] }),
+        listRuns: async () => ({ items: [] }),
+        getRun: async () => makeMockRun(),
+        getAgent: async () => ({
+          agentId: "x",
+          name: "x",
+          summary: "x",
+          lastModified: 0,
+        }),
+        archiveAgent: async () => undefined,
+        unarchiveAgent: async () => undefined,
+        deleteAgent: async () => undefined,
+        listMessages: async () => [],
+        me: async () => ({ apiKeyName: "m", createdAt: "now" }),
+        listModels: async () => [],
+        listRepositories: async () => [],
+      }),
+    );
+
+    const agentLayer = CursorAgentService.Live.pipe(Layer.provide(sdkLayer));
+
+    const agents = yield* Effect.gen(function* () {
+      return yield* CursorAgentService;
+    }).pipe(Effect.provide(agentLayer));
+
+    yield* agents.createFromConfig(config, {
+      model: { id: "composer-2" },
+    });
+    expect(createOptions).toMatchObject({
+      apiKey: "env-key",
+      model: { id: "composer-2" },
+      local: { cwd: "/repo" },
+    });
+
+    yield* agents.resumeFromConfig("agent-1", config, {
+      model: { id: "resume-override" },
+    });
+    expect(resumeCall).toEqual({
+      agentId: "agent-1",
+      options: expect.objectContaining({
+        apiKey: "env-key",
+        model: { id: "resume-override" },
+        local: { cwd: "/repo" },
+      }),
+    });
+
+    yield* agents.promptFromConfig("hello", config, {
+      model: { id: "prompt-model" },
+    });
+    expect(promptCall).toEqual({
+      message: "hello",
+      options: expect.objectContaining({
+        apiKey: "env-key",
+        model: { id: "prompt-model" },
+        local: { cwd: "/repo" },
+      }),
+    });
+
+    yield* Effect.scoped(
+      Effect.gen(function* () {
+        createOptions = undefined;
+        yield* agents.scopedFromConfig(config, { model: { id: "scoped-model" } });
+      }),
+    ).pipe(Effect.provide(agentLayer));
+
+    expect(createOptions).toMatchObject({
+      apiKey: "env-key",
+      model: { id: "scoped-model" },
+      local: { cwd: "/repo" },
+    });
+  }),
 );
 
 const assistantEvent: SDKMessage = {
