@@ -228,7 +228,7 @@ const agentGardenSnapshot = Effect.gen(function* () {
     { concurrency: "unbounded" },
   ).pipe(
     Effect.retry(
-      Schedule.exponential("150 millis").pipe(Schedule.compose(Schedule.recurs(3))),
+      Schedule.exponential("150 millis").pipe(Schedule.both(Schedule.recurs(3))),
     ),
     Effect.timeout("45 seconds"),
   );
