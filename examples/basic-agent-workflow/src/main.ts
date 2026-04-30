@@ -9,7 +9,7 @@ import {
 } from "effect-cursor-sdk";
 import { Effect, Stream } from "effect";
 
-import { printArtifacts, printSection, textFromAssistantEvent } from "./format";
+import { assistantText, formatArtifact } from "./format";
 
 const prompt =
   process.argv.slice(2).join(" ") ||
@@ -28,7 +28,7 @@ const program = Effect.scoped(
       }),
     );
 
-    yield* printSection("Sending prompt");
+    yield* heading("Sending prompt");
     yield* Effect.sync(() => console.log(prompt));
 
     const run = yield* agents.send(agent, prompt);
@@ -36,13 +36,13 @@ const program = Effect.scoped(
       console.log(`\n[status] ${status}`);
     });
 
-    yield* printSection("Assistant stream");
+    yield* heading("Assistant stream");
     yield* runs
       .streamEvents(run)
       .pipe(
         Stream.runForEach((event: SDKMessage) =>
           Effect.sync(() => {
-            const text = textFromAssistantEvent(event);
+            const text = assistantText(event);
             if (text.length > 0) process.stdout.write(text);
           }),
         ),
@@ -52,14 +52,14 @@ const program = Effect.scoped(
     const result = yield* runs.wait(run);
     yield* Effect.sync(() => unsubscribe());
 
-    yield* printSection("Run result");
+    yield* heading("Run result");
     yield* Effect.sync(() => {
       console.log(`run: ${result.id}`);
       console.log(`status: ${result.status}`);
       if (result.result) console.log(`result: ${result.result}`);
     });
 
-    yield* printSection("Run capabilities");
+    yield* heading("Run capabilities");
     yield* Effect.sync(() => {
       for (const operation of ["cancel", "conversation"] as const) {
         const supported = runs.supports(run, operation);
@@ -69,8 +69,14 @@ const program = Effect.scoped(
     });
 
     const artifactList = yield* artifacts.listArtifacts(agent);
-    yield* printSection("Artifacts");
-    yield* printArtifacts(artifactList);
+    yield* heading("Artifacts");
+    yield* Effect.sync(() => {
+      if (artifactList.length === 0) {
+        console.log("No artifacts were produced by this run.");
+        return;
+      }
+      for (const artifact of artifactList) console.log(formatArtifact(artifact));
+    });
 
     const firstArtifact = artifactList[0];
     if (firstArtifact) {
@@ -83,3 +89,10 @@ const program = Effect.scoped(
 ).pipe(Effect.provide(liveLayer));
 
 await Effect.runPromise(program);
+
+function heading(title: string): Effect.Effect<void> {
+  return Effect.sync(() => {
+    console.log(`\n${title}`);
+    console.log("-".repeat(title.length));
+  });
+}
