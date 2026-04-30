@@ -20,13 +20,14 @@ It is the richest example in the suite and covers:
 
 ```bash
 bun install
+bun run --cwd ../.. build
 cp .env.example .env
 export CURSOR_API_KEY="your-key"
 export CURSOR_MODEL="composer-2"
 ```
 
-The example uses `"effect-cursor-sdk": "file:../.."` so it runs against this
-repository. In an application, replace that with the published package.
+The example package links to this repository after install. In an application,
+install the published package instead.
 
 ## Run
 

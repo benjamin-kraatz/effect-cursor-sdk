@@ -17,6 +17,7 @@ config overrides, and tagged error handling.
 ```bash
 cd examples/cli
 bun install
+bun run --cwd ../.. build
 cp .env.example .env
 export CURSOR_API_KEY="your-key"
 ```
@@ -45,4 +46,3 @@ bun run dev -- --mock "Summarize the mock response"
 - `CursorAuthenticationError`: check `CURSOR_API_KEY`.
 - `CursorConfigurationError`: check model id, cwd, and prompt shape.
 - `CursorRateLimitError`: wait and retry later.
-

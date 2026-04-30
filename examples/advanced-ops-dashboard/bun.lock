@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "effect-cursor-sdk-example-cli",
+      "name": "effect-cursor-sdk-example-advanced-ops-dashboard",
       "dependencies": {
         "@cursor/sdk": "^1.0.9",
         "effect": "^4.0.0-beta.57",
