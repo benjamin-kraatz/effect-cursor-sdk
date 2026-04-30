@@ -1,6 +1,6 @@
 # effect-cursor-sdk
 
-![npm](https://img.shields.io/npm/v/effect-cursor-sdk) ![License MIT](https://img.shields.io/github/license/benjamin-kraatz/effect-cursor-sdk) ![CI](https://img.shields.io/github/actions/workflow/status/benjamin-kraatz/effect-cursor-sdk/ci.yml) ![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/benjamin-kraatz/effect-cursor-sdk?utm_source=oss&utm_medium=github&utm_campaign=benjamin-kraatz%2Feffect-cursor-sdk&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews)
+[![npm](https://img.shields.io/npm/v/effect-cursor-sdk)](https://www.npmjs.com/package/effect-cursor-sdk) ![License MIT](https://img.shields.io/github/license/benjamin-kraatz/effect-cursor-sdk) ![CI](https://img.shields.io/github/actions/workflow/status/benjamin-kraatz/effect-cursor-sdk/ci.yml) ![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/benjamin-kraatz/effect-cursor-sdk?utm_source=oss&utm_medium=github&utm_campaign=benjamin-kraatz%2Feffect-cursor-sdk&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews)
 
 Effect-native access to the new [Cursor SDK](https://cursor.com/docs/sdk/typescript).
 
