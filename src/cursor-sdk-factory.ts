@@ -58,17 +58,29 @@ import type { CursorRunService } from "./cursor-run";
  * @see {@link CursorArtifactService} for artifact APIs on an SDK agent.
  *
  * @remarks
- * **API boundary notice:** `create`, `resume`, and `prompt` take raw
- * {@link AgentOptions} today; the same possible future change described on
- * {@link CursorAgentServiceShape} may apply here. Prefer
- * {@link loadCursorConfig} with {@link agentOptionsFromConfig} before calling
- * these methods when wiring production code.
+ * **Deprecated for application code:** `create`, `resume`, and `prompt` accept
+ * raw {@link AgentOptions} (including a plain `apiKey` string). Prefer
+ * {@link CursorAgentService} with `loadCursorConfig` and `createFromConfig` /
+ * `resumeFromConfig` / `promptFromConfig` from this package instead.
+ * This factory remains the low-level adapter for tests and advanced overrides.
  *
  * @category services
  */
 export interface CursorSdkFactoryShape {
+  /**
+   * @deprecated Prefer {@link CursorAgentService} with config-based helpers.
+   * Low-level adapter to `Agent.create`.
+   */
   readonly create: (options: AgentOptions) => Promise<SDKAgent>;
+  /**
+   * @deprecated Prefer {@link CursorAgentService} with config-based helpers.
+   * Low-level adapter to `Agent.resume`.
+   */
   readonly resume: (agentId: string, options?: Partial<AgentOptions>) => Promise<SDKAgent>;
+  /**
+   * @deprecated Prefer {@link CursorAgentService} with config-based helpers.
+   * Low-level adapter to `Agent.prompt`.
+   */
   readonly prompt: (message: string, options?: AgentOptions) => Promise<RunResult>;
   readonly listAgents: (options?: ListAgentsOptions) => Promise<ListResult<SDKAgentInfo>>;
   readonly listRuns: (agentId: string, options?: ListRunsOptions) => Promise<ListResult<Run>>;
@@ -94,9 +106,13 @@ export interface CursorSdkFactoryShape {
  *
  * @example
  * ```ts
+ * import { CursorSdkFactory, agentOptionsFromConfig, loadCursorConfig } from "effect-cursor-sdk"
+ * import { Effect } from "effect"
+ *
  * const program = Effect.gen(function*() {
  *   const sdk = yield* CursorSdkFactory
- *   return sdk.create({ model: { id: "composer-2" }, local: { cwd: process.cwd() } })
+ *   const config = yield* loadCursorConfig
+ *   return sdk.create(agentOptionsFromConfig(config, { model: { id: "composer-2" } }))
  * })
  * ```
  *
