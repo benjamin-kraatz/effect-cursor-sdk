@@ -124,17 +124,20 @@ export const agentOptionsFromConfig = (
 ): AgentOptions => {
   const model: ModelSelection | undefined =
     overrides.model ?? (config.modelId ? { id: config.modelId } : undefined);
+  const hasNonEmptyLocalOverride =
+    overrides.local !== undefined && Object.keys(overrides.local).length > 0;
+  const local =
+    config.cwd || hasNonEmptyLocalOverride
+      ? {
+          cwd: config.cwd,
+          ...overrides.local,
+        }
+      : undefined;
   return {
     ...overrides,
     apiKey: overrides.apiKey ?? (config.apiKey ? Redacted.value(config.apiKey) : undefined),
     model,
-    local:
-      (overrides.local ?? config.cwd)
-        ? {
-            cwd: config.cwd,
-            ...overrides.local,
-          }
-        : undefined,
+    local,
   };
 };
 

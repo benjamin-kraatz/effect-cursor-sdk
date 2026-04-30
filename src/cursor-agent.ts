@@ -340,11 +340,19 @@ export class CursorAgentService extends Context.Service<
         return create(agentOptionsFromConfig(config, overrides));
       };
 
-      const resumeFromConfig = (agentId: string, config: CursorConfig, overrides: AgentOptions = {}) => {
+      const resumeFromConfig = (
+        agentId: string,
+        config: CursorConfig,
+        overrides: AgentOptions = {},
+      ) => {
         return resume(agentId, agentOptionsFromConfig(config, overrides));
       };
 
-      const promptFromConfig = (message: string, config: CursorConfig, overrides: AgentOptions = {}) => {
+      const promptFromConfig = (
+        message: string,
+        config: CursorConfig,
+        overrides: AgentOptions = {},
+      ) => {
         return prompt(message, agentOptionsFromConfig(config, overrides));
       };
 

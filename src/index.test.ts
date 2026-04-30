@@ -185,6 +185,16 @@ it("builds SDK options from wrapper config without replacing overrides", () => {
     local: undefined,
     model: undefined,
   });
+  expect(agentOptionsFromConfig(new CursorConfig({}), { local: {} })).toEqual({
+    apiKey: undefined,
+    local: undefined,
+    model: undefined,
+  });
+  expect(
+    agentOptionsFromConfig({ cwd: CursorLocalCwd.make("/repo") }, { local: {} }),
+  ).toMatchObject({
+    local: { cwd: "/repo" },
+  });
 });
 
 it.effect("loads Cursor config from an Effect config provider", () =>
