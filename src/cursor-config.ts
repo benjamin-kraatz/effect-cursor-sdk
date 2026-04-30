@@ -33,16 +33,16 @@ export type CursorLocalCwd = typeof CursorLocalCwd.Type;
  * Minimal configuration owned by this wrapper.
  *
  * The SDK's `AgentOptions` type remains the source of truth for complete
- * runtime options. This schema only models environment-derived defaults.
+ * runtime options. This schema models environment-derived defaults only.
  * Use {@link agentOptionsFromConfig} to merge those defaults into SDK-owned
- * {@link AgentOptions}.
+ * {@link AgentOptions} at the SDK boundary.
  *
  * @remarks
- * **Forward path:** A future major version of this package may require all
- * agent-related options to be supplied through this module (for example
- * {@link loadCursorConfig} plus {@link agentOptionsFromConfig}) instead of raw
- * {@link AgentOptions} on {@link CursorAgentService}.
- * Prefer this path for new code.
+ * **Preferred path:** Load defaults with {@link loadCursorConfig}, then call
+ * `CursorAgentService` methods such as `createFromConfig` (and related helpers)
+ * or merge manually with {@link agentOptionsFromConfig}. Passing plain
+ * {@link AgentOptions} directly to deprecated `create` / `resume` / `prompt` /
+ * `scoped` overloads may be removed in a future major version.
  *
  * @example
  * ```ts
@@ -69,7 +69,7 @@ export class CursorConfig extends Schema.Class<CursorConfig>("CursorConfig")({
  *
  * Reads `CURSOR_API_KEY`, `CURSOR_MODEL`, and `CURSOR_LOCAL_CWD` from the active
  * Effect {@link ConfigProvider.ConfigProvider}. All fields are optional so
- * callers can still pass complete SDK options explicitly.
+ * callers can merge with explicit overrides via {@link agentOptionsFromConfig}.
  *
  * @example
  * ```ts
@@ -91,7 +91,9 @@ export const cursorConfig = Config.all({
 /**
  * Build SDK `AgentOptions` from wrapper config and optional overrides.
  *
- * Explicit override values always win over environment-derived defaults.
+ * This is the adapter from typed, redacted {@link CursorConfig} to the SDK's
+ * plain-string `apiKey` boundary. Prefer `CursorAgentService.createFromConfig`
+ * (and related methods) over building {@link AgentOptions} by hand.
  *
  * @param config - Wrapper-owned environment defaults.
  * @param overrides - Complete or partial SDK-owned options to merge over the defaults.
@@ -110,9 +112,9 @@ export const cursorConfig = Config.all({
  * @see {@link AgentOptions}
  *
  * @remarks
- * Same **forward path** notice as {@link CursorConfig}: this merge is the
- * intended boundary for redacted keys and env defaults ahead of a possible
- * requirement to use it for all agent entry points.
+ * Explicit override values always win over environment-derived defaults.
+ * For application code, prefer service methods that take {@link CursorConfig}
+ * instead of calling this helper and then the deprecated `create` overload.
  *
  * @category config
  */
@@ -122,36 +124,62 @@ export const agentOptionsFromConfig = (
 ): AgentOptions => {
   const model: ModelSelection | undefined =
     overrides.model ?? (config.modelId ? { id: config.modelId } : undefined);
+  const hasNonEmptyLocalOverride =
+    overrides.local !== undefined && Object.keys(overrides.local).length > 0;
+  const local =
+    config.cwd || hasNonEmptyLocalOverride
+      ? {
+          cwd: config.cwd,
+          ...overrides.local,
+        }
+      : undefined;
   return {
     ...overrides,
     apiKey: overrides.apiKey ?? (config.apiKey ? Redacted.value(config.apiKey) : undefined),
     model,
-    local:
-      (overrides.local ?? config.cwd)
-        ? {
-            cwd: config.cwd,
-            ...overrides.local,
-          }
-        : undefined,
+    local,
   };
 };
 
 /**
  * Load environment-derived defaults as a schema-backed value.
+ * It uses ConfigProvider to load the environment variables
+ * with their default names (`CURSOR_API_KEY`, `CURSOR_MODEL`, `CURSOR_LOCAL_CWD`)
+ * from {@link cursorConfig}.
  *
  * @example
  * ```ts
  * const config = yield* loadCursorConfig
  * const options = agentOptionsFromConfig(config, { local: { cwd: process.cwd() } })
+ * // Or use CursorAgentService.createFromConfig(config, { local: { cwd: process.cwd() } })
+ * ```
+ *
+ * To change the way that the environment variables are loaded,
+ * you can do it with Effect by providing a custom ConfigProvider.
+ *
+ * ```ts
+ * // For example: load via custom environment object
+ * const config = yield* loadCursorConfig.pipe(
+ *  Effect.provideService(
+ *    ConfigProvider.ConfigProvider,
+ *    ConfigProvider.fromEnv({
+ *      env: {
+ *        CURSOR_API_KEY: "crsr_******",
+ *        CURSOR_MODEL: "composer-2",
+ *        CURSOR_LOCAL_CWD: "/workspace",
+ *      },
+ *    }),
+ *  ),
+ * )
  * ```
  *
  * @see {@link cursorConfig}
  * @see {@link agentOptionsFromConfig}
  *
  * @remarks
- * Same **forward path** notice as {@link CursorConfig}: this effect is the
- * intended entry for redacted env defaults ahead of a possible requirement to
- * use it (with {@link agentOptionsFromConfig}) for all agent entry points.
+ * This effect is the preferred entry for redacted environment defaults.
+ * Pair it with {@link agentOptionsFromConfig} or `CursorAgentService` helpers
+ * such as `createFromConfig`.
  *
  * @category config
  */
