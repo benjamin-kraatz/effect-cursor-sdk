@@ -307,9 +307,7 @@ it.effect("uses mock layer for agent, run, artifact, and inspection services", (
         messages: [{ type: "user", uuid: "u1", agent_id: "mock-agent", message: { text: "hi" } }],
         user: { apiKeyName: "mock-key", userEmail: "mock@example.com", createdAt: "now" },
         models: [{ id: "composer-2", displayName: "Composer 2" }],
-        repositories: [
-          { url: "https://github.com/example/repo" },
-        ],
+        repositories: [{ url: "https://github.com/example/repo" }],
       }),
     ),
   ),

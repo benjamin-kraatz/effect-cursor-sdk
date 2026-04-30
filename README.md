@@ -134,16 +134,16 @@ const program = Effect.scoped(
 Cloud options are passed through as SDK `AgentOptions`:
 
 ```ts
-const agent =
-  yield *
-  agents.create({
-    apiKey: process.env.CURSOR_API_KEY,
-    model: { id: "composer-2" },
-    cloud: {
-      repos: [{ url: "https://github.com/your-org/your-repo", startingRef: "main" }],
-      autoCreatePR: true,
-    },
-  });
+const agent = yield* agents.create({
+  apiKey: process.env.CURSOR_API_KEY,
+  model: { id: "composer-2" },
+  cloud: {
+    repos: [
+      { url: "https://github.com/your-org/your-repo", startingRef: "main" },
+    ],
+    autoCreatePR: true,
+  },
+});
 ```
 
 ## Streaming
@@ -151,18 +151,24 @@ const agent =
 `CursorRunService.streamEvents` preserves SDK event shapes and returns an Effect `Stream`.
 
 ```ts
-const run = yield * agents.send(agent, "Refactor the auth module");
+import { Effect, Stream } from "effect";
 
-yield *
-  runs
-    .streamEvents(run)
-    .pipe(
-      Stream.runForEach((event) =>
-        event.type === "assistant"
-          ? Effect.sync(() => console.log(event.message.content))
-          : Effect.void,
-      ),
-    );
+const run = yield* agents.send(agent, "Refactor the auth module");
+
+yield* runs.streamEvents(run).pipe(
+  Stream.runForEach((event) => {
+    if (event.type !== "assistant") {
+      return Effect.void;
+    }
+
+    const text = event.message.content
+      .filter((block) => block.type === "text")
+      .map((block) => block.text)
+      .join("");
+
+    return Effect.sync(() => console.log(text));
+  }),
+);
 ```
 
 ## Inspection And Metadata
@@ -170,11 +176,11 @@ yield *
 Use `CursorInspectionService` for agent/run listings, messages, lifecycle operations, account metadata, model discovery, and connected repositories.
 
 ```ts
-const inspection = yield * CursorInspectionService;
+const inspection = yield* CursorInspectionService;
 
-const agents = yield * inspection.listAgents({ runtime: "cloud", includeArchived: true });
-const models = yield * inspection.listModels();
-const repos = yield * inspection.listRepositories();
+const agents = yield* inspection.listAgents({ runtime: "cloud", includeArchived: true });
+const models = yield* inspection.listModels();
+const repos = yield* inspection.listRepositories();
 ```
 
 ## Integrate deeper with Effect
