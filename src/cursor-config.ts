@@ -147,6 +147,11 @@ export const agentOptionsFromConfig = (
  * with their default names (`CURSOR_API_KEY`, `CURSOR_MODEL`, `CURSOR_LOCAL_CWD`)
  * from {@link cursorConfig}.
  *
+ * If the API key is not set, it will log a warning message.
+ *
+ * **NOTE**: omitting the API key will cause an unauthenticated error
+ * in subsequent calls to the Cursor SDK API.
+ *
  * @example
  * ```ts
  * const config = yield* loadCursorConfig
@@ -187,6 +192,12 @@ export const loadCursorConfig = Effect.gen(function* () {
   const provider = yield* ConfigProvider.ConfigProvider;
   const raw = yield* cursorConfig.parse(provider);
   const apiKey = Option.getOrUndefined(raw.apiKey);
+  if (apiKey === undefined || apiKey === null) {
+    yield* Effect.logWarning(
+      "CURSOR_API_KEY is not set — this will cause an unauthenticated error in subsequent calls to the Cursor SDK API.",
+    );
+  }
+
   const modelId = Option.getOrUndefined(raw.modelId);
   const cwd = Option.getOrUndefined(raw.cwd);
   return new CursorConfig({
