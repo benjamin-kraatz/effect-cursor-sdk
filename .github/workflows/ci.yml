@@ -26,7 +26,7 @@ jobs:
         run: bun run typecheck
 
       - name: SDK surface audit
-        run: bun run sdk-audit
+        run: bun run sdk-audit:refresh && bun run sdk-audit
 
       - name: Lint (oxlint)
         run: bun run lint
