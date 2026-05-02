@@ -18,13 +18,20 @@ Effect-native access to the new [Cursor SDK](https://cursor.com/docs/sdk/typescr
 - Observable: SDK calls are wrapped in spans and metrics with secret redaction utilities.
 - Testable: mock layers and fixtures let applications test Cursor workflows without network calls.
 
+## Documentation
+
+- [SDK coverage & compatibility](./docs/SDK_COVERAGE.md) — wrapper checklist, audit script, release alignment
+- [Recipes](./docs/RECIPES.md) — short patterns (config-first agent, streaming, pagination, lifecycle, tests)
+- [Release checklist](./docs/RELEASE_CHECKLIST.md) — gates, SDK bumps, Changesets
+- [Next major migration (planned)](./docs/MIGRATION_NEXT_MAJOR.md) — config-first renames after deprecations are removed
+
 ## Feature Coverage
 
 | SDK capability                                                                   | Effect wrapper                                 |
 | -------------------------------------------------------------------------------- | ---------------------------------------------- |
 | `Agent.create`, `Agent.resume`, `Agent.prompt`                                   | `CursorAgentService`                           |
 | `agent.send`, `reload`, `close`, async dispose                                   | `CursorAgentService`                           |
-| `run.wait`, `stream`, `conversation`, `cancel`, status listeners, support checks | `CursorRunService`                             |
+| `run.wait`, `stream`, `conversation`, `cancel`, status listeners / streams, support checks | `CursorRunService`                             |
 | `agent.listArtifacts`, `downloadArtifact`                                        | `CursorArtifactService`                        |
 | `Agent.list`, `get`, `listRuns`, `getRun`, messages                              | `CursorInspectionService`                      |
 | `Agent.archive`, `unarchive`, `delete`                                           | `CursorInspectionService`                      |
@@ -310,6 +317,8 @@ const testProgram = Effect.gen(function* () {
 
 The main exports are:
 
+- **Recipes** — common compositions (prompt text, send + collect, pagination, lifecycle guards, artifacts) in [RECIPES.md](./docs/RECIPES.md)
+- **Observability helpers** (`streamEventsTracked`, `collectTextTracked`, catalog retry/timeout presets, log summaries)
 - `CursorAgentService` (prefer `createFromConfig`, `scopedFromConfig`, `promptFromConfig`, `resumeFromConfig` with `loadCursorConfig`; plain `AgentOptions` at the agent boundary is [deprecated](./DEPRECATIONS.md))
 - `CursorRunService`
 - `CursorArtifactService`
@@ -326,6 +335,7 @@ Use generated TypeScript declarations for exact signatures.
 
 ```bash
 bun run typecheck
+bun run sdk-audit
 bun run lint
 bun run format:check
 bun run test
@@ -333,6 +343,8 @@ bun run test:coverage
 bun run build
 bun run lint:package
 ```
+
+After a `@cursor/sdk` bump, if `sdk-audit` fails, review [docs/SDK_COVERAGE.md](./docs/SDK_COVERAGE.md) and refresh the baseline only when drift is intentional: `bun run sdk-audit:refresh`.
 
 Coverage is measured with Vitest v8 coverage. The suite focuses on deterministic wrapper behavior; live SDK network paths should be validated separately with credentials and a disposable repository.
 
@@ -365,4 +377,4 @@ bun run version
 bun run release
 ```
 
-`bun run release` runs `typecheck`, `lint`, `test`, `build`, and `publint` before publishing to NPM.
+`bun run release` runs `verify:publish` (including `sdk-audit`) before publishing to NPM.

@@ -9,7 +9,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@cursor/sdk": "^1.0.9",
+    "@cursor/sdk": "^1.0.10",
     "effect": "^4.0.0-beta.57"
   },
   "devDependencies": {
