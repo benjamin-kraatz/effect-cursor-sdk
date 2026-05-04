@@ -609,6 +609,48 @@ it.effect("collectText ignores non-assistant stream events", () =>
   }).pipe(Effect.provide(CursorRunService.Live)),
 );
 
+it.effect("collectText concatenates only text blocks inside assistant messages", () =>
+  Effect.gen(function* () {
+    const runs = yield* CursorRunService;
+    const toolOnlyAssistant: SDKMessage = {
+      type: "assistant",
+      agent_id: "mock-agent",
+      run_id: "mock-run",
+      message: {
+        role: "assistant",
+        content: [{ type: "tool_use", id: "t1", name: "read", input: { path: "/x" } }],
+      },
+    };
+    const mixedAssistant: SDKMessage = {
+      type: "assistant",
+      agent_id: "mock-agent",
+      run_id: "mock-run",
+      message: {
+        role: "assistant",
+        content: [
+          { type: "text", text: "a" },
+          { type: "tool_use", id: "t2", name: "grep", input: { q: "y" } },
+          { type: "text", text: "b" },
+        ],
+      },
+    };
+    const textFromToolOnly = yield* runs.collectText(
+      makeMockRun({
+        stream: [toolOnlyAssistant],
+        result: { id: "mock-run", status: "finished" },
+      }),
+    );
+    const textFromMixed = yield* runs.collectText(
+      makeMockRun({
+        stream: [mixedAssistant],
+        result: { id: "mock-run", status: "finished" },
+      }),
+    );
+    expect(textFromToolOnly).toBe("");
+    expect(textFromMixed).toBe("ab");
+  }).pipe(Effect.provide(CursorRunService.Live)),
+);
+
 it.effect("mock agent closes on explicit disposal", () =>
   Effect.gen(function* () {
     const agent = makeMockAgent();
