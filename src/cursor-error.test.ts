@@ -33,6 +33,27 @@ it("run.cancel maps AuthenticationError to CursorAuthenticationError", () => {
   expect(err.operation).toBe("run.cancel");
 });
 
+it("run.conversation maps AuthenticationError to CursorAuthenticationError", () => {
+  const err = mapCursorError(new AuthenticationError("denied"), {
+    operation: "run.conversation",
+    runId: "r1",
+  });
+  expect(err).toBeInstanceOf(CursorAuthenticationError);
+  expect(err.operation).toBe("run.conversation");
+});
+
+it("run.conversation maps UnsupportedRunOperationError with SDK operation metadata", () => {
+  const err = mapCursorError(new UnsupportedRunOperationError("conversation", "nope"), {
+    operation: "run.conversation",
+    runId: "r1",
+  });
+  expect(err).toBeInstanceOf(CursorUnsupportedOperationError);
+  expect(err).toMatchObject({
+    sdkOperation: "run.conversation",
+    message: "nope",
+  });
+});
+
 it("UnsupportedRunOperationError forwards SDK operation onto mapped error", () => {
   const err = mapCursorError(new UnsupportedRunOperationError("cancel", "nope"), {
     operation: "run.cancel",
