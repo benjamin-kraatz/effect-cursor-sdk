@@ -2,9 +2,11 @@ import { Agent } from "@cursor/sdk";
 import { expect, it } from "@effect/vitest";
 import { Effect, ManagedRuntime } from "effect";
 import { vi } from "vitest";
-import { CursorSdkFactory } from "./cursor-sdk-factory";
-import { liveLayer } from "./cursor-runtime";
+import { CursorAgentService } from "./cursor-agent";
 import { makeMockAgent } from "./cursor-mock";
+import { CursorRunService } from "./cursor-run";
+import { CursorSdkFactory } from "./cursor-sdk-factory";
+import { liveLayer, makeMockRuntime, mockLayer } from "./cursor-runtime";
 
 it("liveLayer wires CursorSdkFactory into the merged service stack", async () => {
   const agent = makeMockAgent({ agentId: "live-stack-agent" });
@@ -25,4 +27,22 @@ it("liveLayer wires CursorSdkFactory into the merged service stack", async () =>
   } finally {
     await runtime.dispose();
   }
+});
+
+it.effect("mockLayer wires mock agent and run services without custom fixtures", () =>
+  Effect.gen(function* () {
+    const agents = yield* CursorAgentService;
+    const runs = yield* CursorRunService;
+    const agent = yield* agents.create({});
+    const run = yield* agents.send(agent, "ping");
+    const text = yield* runs.collectText(run);
+    expect(text).toBe("");
+  }).pipe(Effect.provide(mockLayer())),
+);
+
+it("makeMockRuntime runs programs and disposes cleanly", async () => {
+  const runtime = makeMockRuntime();
+  const value = await runtime.runPromise(Effect.succeed(42));
+  expect(value).toBe(42);
+  await runtime.dispose();
 });

@@ -1,38 +1,120 @@
 import { expect, it } from "@effect/vitest";
 import { Effect } from "effect";
-import { CursorRunService } from "./cursor-run";
+
 import { makeMockRun } from "./cursor-mock";
+import { CursorRunService } from "./cursor-run";
+import type { SDKMessage } from "./cursor-types";
 
-const assistantEvent = {
-  type: "assistant" as const,
-  agent_id: "mock-agent",
-  run_id: "mock-run",
-  message: {
-    role: "assistant" as const,
-    content: [{ type: "text" as const, text: "hello" }],
-  },
-};
-
-it.effect("collectText concatenates multiple assistant text blocks in order", () =>
+it.effect("collectText joins multiple text blocks in one assistant message", () =>
   Effect.gen(function* () {
     const runs = yield* CursorRunService;
+    const stream: SDKMessage[] = [
+      {
+        type: "assistant",
+        agent_id: "mock-agent",
+        run_id: "mock-run",
+        message: {
+          role: "assistant",
+          content: [
+            { type: "text", text: "hello " },
+            { type: "text", text: "world" },
+          ],
+        },
+      },
+    ];
     const text = yield* runs.collectText(
-      makeMockRun({
-        stream: [
-          {
-            ...assistantEvent,
-            message: {
-              role: "assistant",
-              content: [
-                { type: "text", text: "a" },
-                { type: "text", text: "b" },
-              ],
-            },
-          },
-        ],
-        result: { id: "mock-run", status: "finished" },
-      }),
+      makeMockRun({ stream, result: { id: "mock-run", status: "finished" } }),
     );
-    expect(text).toBe("ab");
+    expect(text).toBe("hello world");
+  }).pipe(Effect.provide(CursorRunService.Live)),
+);
+
+it.effect("collectText ignores tool_use blocks and keeps only text blocks", () =>
+  Effect.gen(function* () {
+    const runs = yield* CursorRunService;
+    const stream: SDKMessage[] = [
+      {
+        type: "assistant",
+        agent_id: "mock-agent",
+        run_id: "mock-run",
+        message: {
+          role: "assistant",
+          content: [
+            { type: "tool_use", id: "call-1", name: "read_file", input: { path: "x" } },
+            { type: "text", text: "summary" },
+          ],
+        },
+      },
+    ];
+    const text = yield* runs.collectText(
+      makeMockRun({ stream, result: { id: "mock-run", status: "finished" } }),
+    );
+    expect(text).toBe("summary");
+  }).pipe(Effect.provide(CursorRunService.Live)),
+);
+
+it.effect("collectText concatenates text across multiple assistant stream events", () =>
+  Effect.gen(function* () {
+    const runs = yield* CursorRunService;
+    const stream: SDKMessage[] = [
+      {
+        type: "assistant",
+        agent_id: "mock-agent",
+        run_id: "mock-run",
+        message: {
+          role: "assistant",
+          content: [{ type: "text", text: "first" }],
+        },
+      },
+      {
+        type: "assistant",
+        agent_id: "mock-agent",
+        run_id: "mock-run",
+        message: {
+          role: "assistant",
+          content: [{ type: "text", text: "second" }],
+        },
+      },
+    ];
+    const text = yield* runs.collectText(
+      makeMockRun({ stream, result: { id: "mock-run", status: "finished" } }),
+    );
+    expect(text).toBe("firstsecond");
+  }).pipe(Effect.provide(CursorRunService.Live)),
+);
+
+it.effect("collectText ignores non-assistant stream events while concatenating text", () =>
+  Effect.gen(function* () {
+    const runs = yield* CursorRunService;
+    const stream: SDKMessage[] = [
+      {
+        type: "assistant",
+        agent_id: "mock-agent",
+        run_id: "mock-run",
+        message: {
+          role: "assistant",
+          content: [{ type: "text", text: "first" }],
+        },
+      },
+      {
+        type: "status",
+        agent_id: "mock-agent",
+        run_id: "mock-run",
+        status: "RUNNING",
+      },
+      {
+        type: "assistant",
+        agent_id: "mock-agent",
+        run_id: "mock-run",
+        message: {
+          role: "assistant",
+          content: [{ type: "text", text: "second" }],
+        },
+      },
+    ];
+    const text = yield* runs.collectText(
+      makeMockRun({ stream, result: { id: "mock-run", status: "finished" } }),
+    );
+    expect(text).toBe("firstsecond");
   }).pipe(Effect.provide(CursorRunService.Live)),
 );
