@@ -146,6 +146,9 @@ export const agentOptionsFromConfig = (
  * It uses ConfigProvider to load the environment variables
  * with their default names (`CURSOR_API_KEY`, `CURSOR_MODEL`, `CURSOR_LOCAL_CWD`)
  * from {@link cursorConfig}.
+ * Omitting `CURSOR_API_KEY` only means no default API-key-based auth will be
+ * set; callers can still provide credentials via {@link agentOptionsFromConfig}
+ * overrides or the `*FromConfig` service helpers.
  *
  * @example
  * ```ts
