@@ -5,7 +5,7 @@ import { makeMockRun } from "./cursor-mock";
 import { CursorRunService } from "./cursor-run";
 import type { SDKMessage } from "./cursor-types";
 
-it.effect("collectText joins multiple text blocks in one assistant message", () =>
+it.effect("collectText joins text across assistant stream events", () =>
   Effect.gen(function* () {
     const runs = yield* CursorRunService;
     const stream: SDKMessage[] = [
@@ -15,17 +15,23 @@ it.effect("collectText joins multiple text blocks in one assistant message", () 
         run_id: "mock-run",
         message: {
           role: "assistant",
-          content: [
-            { type: "text", text: "hello " },
-            { type: "text", text: "world" },
-          ],
+          content: [{ type: "text", text: "a" }],
+        },
+      },
+      {
+        type: "assistant",
+        agent_id: "mock-agent",
+        run_id: "mock-run",
+        message: {
+          role: "assistant",
+          content: [{ type: "text", text: "b" }],
         },
       },
     ];
     const text = yield* runs.collectText(
       makeMockRun({ stream, result: { id: "mock-run", status: "finished" } }),
     );
-    expect(text).toBe("hello world");
+    expect(text).toBe("ab");
   }).pipe(Effect.provide(CursorRunService.Live)),
 );
 
