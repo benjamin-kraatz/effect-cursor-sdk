@@ -33,6 +33,7 @@ import {
   agentOptionsFromConfig,
   loadCursorConfig,
   makeMockAgent,
+  makeMockAssistantSdkMessage,
   makeMockRun,
   makeMockRuntime,
   makeMockSdkFactoryLayer,
@@ -449,6 +450,114 @@ it.effect("scopes mock agents and disposes them when the scope closes", () =>
     expect(scopedAgent?.closed).toBe(true);
   }),
 );
+
+it("CursorRunService.streamStatusChanges yields status updates", async () => {
+  const run = makeMockRun({
+    stream: [],
+    result: { id: "mock-run", status: "finished" as const },
+  });
+  await Effect.runPromise(
+    Effect.scoped(
+      Effect.gen(function* () {
+        const runs = yield* CursorRunService;
+        yield* Effect.forkScoped(
+          Effect.gen(function* () {
+            yield* Effect.sleep("15 millis");
+            yield* Effect.promise(() => run.cancel());
+          }),
+        );
+        const statuses = yield* runs
+          .streamStatusChanges(run)
+          .pipe(Stream.take(1), Stream.runCollect);
+        expect(statuses).toEqual(["cancelled"]);
+      }),
+    ).pipe(Effect.provide(CursorRunService.Live)),
+  );
+});
+
+it.effect("mock run honors runSupports overrides", () =>
+  Effect.gen(function* () {
+    const runs = yield* CursorRunService;
+    const run = makeMockRun({
+      stream: [assistantEvent],
+      result: { id: "mock-run", status: "finished" },
+      runSupports: { cancel: false },
+      runUnsupportedReason: { cancel: "nope" },
+    });
+    expect(runs.supports(run, "cancel")).toBe(false);
+    expect(runs.unsupportedReason(run, "cancel")).toBe("nope");
+  }).pipe(Effect.provide(CursorRunService.Live)),
+);
+
+it.effect("makeMockSdkFactoryLayer factoryErrors reject create", () =>
+  Effect.gen(function* () {
+    const agents = yield* CursorAgentService;
+    const fail = yield* agents.create({ model: { id: "composer-2" } }).pipe(Effect.flip);
+    expect(fail).toMatchObject({ _tag: "CursorUnknownError" });
+  }).pipe(
+    Effect.provide(
+      mockLayer({
+        factoryErrors: { create: new Error("boom") },
+      }),
+    ),
+  ),
+);
+
+it.effect("mock agent sendSequence advances per send", () =>
+  Effect.gen(function* () {
+    const agents = yield* CursorAgentService;
+    const runs = yield* CursorRunService;
+    const agent = yield* agents.create({ model: { id: "composer-2" } });
+    const r1 = yield* agents.send(agent, "1");
+    const r2 = yield* agents.send(agent, "2");
+    const t1 = yield* runs.collectText(r1);
+    const t2 = yield* runs.collectText(r2);
+    expect(t1).toBe("one");
+    expect(t2).toBe("two");
+  }).pipe(
+    Effect.provide(
+      mockLayer({
+        sendSequence: [
+          {
+            stream: [
+              {
+                type: "assistant",
+                agent_id: "mock-agent",
+                run_id: "r1",
+                message: {
+                  role: "assistant",
+                  content: [{ type: "text", text: "one" }],
+                },
+              },
+            ],
+            result: { id: "r1", status: "finished" as const, result: "one" },
+          },
+          {
+            stream: [
+              {
+                type: "assistant",
+                agent_id: "mock-agent",
+                run_id: "r2",
+                message: {
+                  role: "assistant",
+                  content: [{ type: "text", text: "two" }],
+                },
+              },
+            ],
+            result: { id: "r2", status: "finished" as const, result: "two" },
+          },
+        ],
+      }),
+    ),
+  ),
+);
+
+it("makeMockAssistantSdkMessage builds assistant event", () => {
+  const msg = makeMockAssistantSdkMessage("hi", { agentId: "a", runId: "r" });
+  expect(msg.type).toBe("assistant");
+  expect(msg.agent_id).toBe("a");
+  expect(msg.run_id).toBe("r");
+});
 
 it.effect("mock run supports cancellation and status listeners", () =>
   Effect.gen(function* () {

@@ -1,0 +1,66 @@
+import { expect, it } from "@effect/vitest";
+import { Effect } from "effect";
+
+import {
+  appendAssistantSdkMessageText,
+  collectTextTracked,
+  summarizeAgentOptionsForLog,
+  summarizeRunForLog,
+} from "./cursor-observability";
+import { CursorRunService } from "./cursor-run";
+import { makeMockRun } from "./cursor-mock";
+
+it("appendAssistantSdkMessageText ignores non-assistant events", () => {
+  expect(
+    appendAssistantSdkMessageText("a", {
+      type: "user",
+      agent_id: "x",
+      run_id: "r",
+      message: { role: "user", content: [{ type: "text", text: "n" }] },
+    }),
+  ).toBe("a");
+  expect(
+    appendAssistantSdkMessageText("a", {
+      type: "assistant",
+      agent_id: "x",
+      run_id: "r",
+      message: { role: "assistant", content: [{ type: "text", text: "b" }] },
+    }),
+  ).toBe("ab");
+});
+
+it.effect("collectTextTracked matches assistant stream text", () =>
+  Effect.gen(function* () {
+    const runs = yield* CursorRunService;
+    const run = makeMockRun({
+      stream: [
+        {
+          type: "assistant",
+          agent_id: "mock-agent",
+          run_id: "mock-run",
+          message: { role: "assistant", content: [{ type: "text", text: "x" }] },
+        },
+      ],
+      result: { id: "mock-run", status: "finished", result: "x" },
+    });
+    const text = yield* collectTextTracked(run, (r) => runs.streamEvents(r));
+    expect(text).toBe("x");
+  }).pipe(Effect.provide(CursorRunService.Live)),
+);
+
+it("summarizeAgentOptionsForLog never includes raw apiKey", () => {
+  const summary = summarizeAgentOptionsForLog({
+    apiKey: "secret",
+    model: { id: "composer-2" },
+  });
+  expect(summary).not.toHaveProperty("apiKey");
+  expect(summary.model).toEqual({ id: "composer-2" });
+});
+
+it("summarizeRunForLog returns ids", () => {
+  expect(summarizeRunForLog({ id: "r1", agentId: "a1", status: "finished" })).toEqual({
+    runId: "r1",
+    agentId: "a1",
+    status: "finished",
+  });
+});

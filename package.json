@@ -21,7 +21,8 @@
     "dist",
     "README.md",
     "DEPRECATIONS.md",
-    "LICENSE"
+    "LICENSE",
+    "docs"
   ],
   "type": "module",
   "sideEffects": false,
@@ -52,15 +53,17 @@
     "examples:typecheck": "bun run --cwd examples/quickstart typecheck && bun run --cwd examples/cli typecheck && bun run --cwd examples/basic-agent-workflow typecheck && bun run --cwd examples/advanced-ops-dashboard typecheck",
     "examples:cli:mock": "bun run --cwd examples/cli dev -- --mock \"Summarize the mock response\"",
     "examples:advanced:mock": "bun run --cwd examples/advanced-ops-dashboard dev -- --mock --triage",
+    "sdk-audit": "bun scripts/sdk-surface-audit.ts",
+    "sdk-audit:refresh": "bun scripts/sdk-surface-audit.ts --write-baseline",
     "lint:package": "publint",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
     "version": "changeset version",
-    "verify:publish": "bun run typecheck && bun run lint && bun run test && bun run build && bun run lint:package"
+    "verify:publish": "bun run typecheck && bun run sdk-audit && bun run lint && bun run test && bun run build && bun run lint:package"
   },
   "dependencies": {
-    "@cursor/sdk": "^1.0.10",
+    "@cursor/sdk": "^1.0.12",
     "effect-cursor-sdk": "."
   },
   "devDependencies": {

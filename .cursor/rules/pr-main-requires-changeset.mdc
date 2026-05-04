@@ -1,0 +1,18 @@
+---
+description: When creating PR against main - PRs must include a Changesets entry; omit changeset chatter from PR body
+alwaysApply: false
+---
+# PRs targeting `main` and Changesets
+
+When the user asks to **open or draft a PR against `main`** (or the default trunk branch), treat a Changesets file as mandatory.
+
+## Before opening the PR
+
+1. Compare the branch to `main` (e.g. `git fetch origin main && git diff origin/main...HEAD` or equivalent).
+2. Ensure **at least one** `.changeset/*.md` file is present and accurately reflects **those** changes (summaries, bump intent, and frontmatter must match `@changesets/cli` usage in this repo). Add or update the changeset as needed before treating the PR as ready—not after.
+
+## PR description
+
+- **Do not** call out “added a changeset”, “includes `.changeset/…`”, or similar in the PR title/body. That is redundant when changesets are required for merge.
+
+Describe **what** changed and **why** for reviewers only.

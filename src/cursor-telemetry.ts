@@ -179,7 +179,7 @@ export const redact = (value: unknown): unknown => {
 };
 
 /**
- * Wraps an SDK-backed {@link Effect.Effect | Effect} with consistent
+ * Wraps an SDK-backed {@link Effect} with consistent
  * observability: increments {@link cursorOperationsStarted} at execution start,
  * increments {@link cursorOperationsFailed} on the error channel, and attaches
  * a span named `cursor.<operation>` (for example `cursor.agent.list`).
