@@ -1,5 +1,11 @@
 # effect-cursor-sdk
 
+## 0.3.0
+
+### Minor Changes
+
+- [#12](https://github.com/benjamin-kraatz/effect-cursor-sdk/pull/12) [`21d89ca`](https://github.com/benjamin-kraatz/effect-cursor-sdk/commit/21d89ca042167ab626d18d4c9037f72f281e972f) Thanks [@benjamin-kraatz](https://github.com/benjamin-kraatz)! - Add `cursor-observability` helpers (stream metrics, catalog retry/timeout defaults, safe summaries). Extend mocks and `cursor-run` wiring; warn when `CURSOR_API_KEY` is missing during config load. Bump `@cursor/sdk` to `^1.0.12`. Add `scripts/sdk-surface-audit.ts` with `sdk-audit` / `sdk-audit:refresh`, run it in CI and `verify:publish`. Ship `docs/` in the published package; add `RECIPES`, `RELEASE_CHECKLIST`, `SDK_COVERAGE`, and `MIGRATION_NEXT_MAJOR`. Refresh README (documentation index, exports, quality gates, release notes). Add a Cursor rule requiring Changesets on PRs to `main`; minor tooling/config updates (Vitest wiring, formatter ignore, gitignore).
+
 ## 0.2.1
 
 ### Patch Changes
