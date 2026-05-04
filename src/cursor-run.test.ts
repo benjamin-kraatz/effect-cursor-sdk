@@ -82,3 +82,39 @@ it.effect("collectText concatenates text across multiple assistant stream events
     expect(text).toBe("firstsecond");
   }).pipe(Effect.provide(CursorRunService.Live)),
 );
+
+it.effect("collectText ignores non-assistant stream events while concatenating text", () =>
+  Effect.gen(function* () {
+    const runs = yield* CursorRunService;
+    const stream: SDKMessage[] = [
+      {
+        type: "assistant",
+        agent_id: "mock-agent",
+        run_id: "mock-run",
+        message: {
+          role: "assistant",
+          content: [{ type: "text", text: "first" }],
+        },
+      },
+      {
+        type: "status",
+        agent_id: "mock-agent",
+        run_id: "mock-run",
+        status: "RUNNING",
+      },
+      {
+        type: "assistant",
+        agent_id: "mock-agent",
+        run_id: "mock-run",
+        message: {
+          role: "assistant",
+          content: [{ type: "text", text: "second" }],
+        },
+      },
+    ];
+    const text = yield* runs.collectText(
+      makeMockRun({ stream, result: { id: "mock-run", status: "finished" } }),
+    );
+    expect(text).toBe("firstsecond");
+  }).pipe(Effect.provide(CursorRunService.Live)),
+);
