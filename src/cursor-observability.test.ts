@@ -1,12 +1,14 @@
 import { expect, it } from "@effect/vitest";
-import { Effect } from "effect";
+import { Effect, Layer, ManagedRuntime, Metric, Stream } from "effect";
 
 import {
   appendAssistantSdkMessageText,
   collectTextTracked,
+  streamEventsTracked,
   summarizeAgentOptionsForLog,
   summarizeRunForLog,
 } from "./cursor-observability";
+import { cursorStreamEvents } from "./cursor-telemetry";
 import { CursorRunService } from "./cursor-run";
 import { makeMockRun } from "./cursor-mock";
 
@@ -63,4 +65,20 @@ it("summarizeRunForLog returns ids", () => {
     agentId: "a1",
     status: "finished",
   });
+});
+
+it("streamEventsTracked increments cursorStreamEvents once per emitted chunk", async () => {
+  const runtime = ManagedRuntime.make(Layer.empty);
+  try {
+    await runtime.runPromise(
+      Effect.gen(function* () {
+        const before = yield* Metric.value(cursorStreamEvents);
+        yield* streamEventsTracked(Stream.fromIterable([1, 2, 3])).pipe(Stream.runDrain);
+        const after = yield* Metric.value(cursorStreamEvents);
+        expect(after.count - before.count).toBe(3);
+      }),
+    );
+  } finally {
+    await runtime.dispose();
+  }
 });
