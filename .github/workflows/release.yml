@@ -25,6 +25,9 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      - name: Refresh Audit Baseline
+        run: bun run sdk-audit:refresh
+
       - name: Create release PR or publish
         uses: changesets/action@v1
         with:
