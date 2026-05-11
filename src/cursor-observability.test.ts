@@ -59,6 +59,43 @@ it("summarizeAgentOptionsForLog never includes raw apiKey", () => {
   expect(summary.model).toEqual({ id: "composer-2" });
 });
 
+it("summarizeAgentOptionsForLog summarizes cloud, MCP servers, and subagent counts", () => {
+  const summary = summarizeAgentOptionsForLog({
+    apiKey: "secret",
+    model: { id: "composer-2" },
+    name: "my-agent",
+    agentId: "agt_1",
+    local: { cwd: "/repo" },
+    cloud: {
+      repos: [{ url: "https://github.com/acme/app" }],
+      autoCreatePR: true,
+      workOnCurrentBranch: false,
+      env: { type: "cloud", name: "default" },
+    },
+    mcpServers: {
+      fs: { command: "mcp-fs", args: [] },
+      git: { command: "mcp-git", args: [] },
+    },
+    agents: {
+      reviewer: { description: "d", prompt: "p" },
+    },
+  });
+  expect(summary).not.toHaveProperty("apiKey");
+  expect(summary).toMatchObject({
+    name: "my-agent",
+    agentId: "agt_1",
+    local: { cwd: "/repo" },
+    mcpServerNames: expect.arrayContaining(["fs", "git"]),
+    agentsCount: 1,
+    cloud: {
+      reposCount: 1,
+      autoCreatePR: true,
+      workOnCurrentBranch: false,
+      envType: "cloud",
+    },
+  });
+});
+
 it("summarizeRunForLog returns ids", () => {
   expect(summarizeRunForLog({ id: "r1", agentId: "a1", status: "finished" })).toEqual({
     runId: "r1",
