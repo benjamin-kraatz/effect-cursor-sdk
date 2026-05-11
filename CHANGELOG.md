@@ -1,5 +1,13 @@
 # effect-cursor-sdk
 
+## 0.3.1
+
+### Patch Changes
+
+- [#19](https://github.com/benjamin-kraatz/effect-cursor-sdk/pull/19) [`1357017`](https://github.com/benjamin-kraatz/effect-cursor-sdk/commit/13570179bab921f2b81a089da354adc7f59eb6b4) Thanks [@cursor](https://github.com/apps/cursor)! - Add regression tests for missing API key config warnings, agent-options log summaries, status stream batching, and mock SDK factory error wiring.
+
+- [#17](https://github.com/benjamin-kraatz/effect-cursor-sdk/pull/17) [`8f2bf13`](https://github.com/benjamin-kraatz/effect-cursor-sdk/commit/8f2bf13621ea404426fda62a5a9c9037297b3b6f) Thanks [@cursor](https://github.com/apps/cursor)! - Add regression tests for telemetry instrumentation and stream event metrics.
+
 ## 0.3.0
 
 ### Minor Changes
