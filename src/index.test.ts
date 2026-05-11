@@ -464,12 +464,13 @@ it("CursorRunService.streamStatusChanges yields status updates", async () => {
           Effect.gen(function* () {
             yield* Effect.sleep("15 millis");
             yield* Effect.promise(() => run.cancel());
+            yield* Effect.promise(() => run.cancel());
           }),
         );
         const statuses = yield* runs
           .streamStatusChanges(run)
-          .pipe(Stream.take(1), Stream.runCollect);
-        expect(statuses).toEqual(["cancelled"]);
+          .pipe(Stream.take(2), Stream.runCollect);
+        expect(statuses).toEqual(["cancelled", "cancelled"]);
       }),
     ).pipe(Effect.provide(CursorRunService.Live)),
   );
@@ -502,6 +503,48 @@ it.effect("makeMockSdkFactoryLayer factoryErrors reject create", () =>
     ),
   ),
 );
+
+it.effect("makeMockSdkFactoryLayer factoryErrors reject static SDK factory methods", () => {
+  const boom = new Error("inspection failed");
+  return Effect.gen(function* () {
+    const sdk = yield* CursorSdkFactory;
+    yield* Effect.promise(async () => {
+      await expect(sdk.listAgents()).rejects.toBe(boom);
+      await expect(sdk.listRuns("a")).rejects.toBe(boom);
+      await expect(sdk.getRun("r")).rejects.toBe(boom);
+      await expect(sdk.getAgent("a")).rejects.toBe(boom);
+      await expect(sdk.resume("a")).rejects.toBe(boom);
+      await expect(sdk.prompt("x")).rejects.toBe(boom);
+      await expect(sdk.listMessages("a")).rejects.toBe(boom);
+      await expect(sdk.me()).rejects.toBe(boom);
+      await expect(sdk.listModels()).rejects.toBe(boom);
+      await expect(sdk.listRepositories()).rejects.toBe(boom);
+      await expect(sdk.archiveAgent("a")).rejects.toBe(boom);
+      await expect(sdk.unarchiveAgent("a")).rejects.toBe(boom);
+      await expect(sdk.deleteAgent("a")).rejects.toBe(boom);
+    });
+  }).pipe(
+    Effect.provide(
+      makeMockSdkFactoryLayer({
+        factoryErrors: {
+          listAgents: boom,
+          listRuns: boom,
+          getRun: boom,
+          getAgent: boom,
+          resume: boom,
+          prompt: boom,
+          listMessages: boom,
+          me: boom,
+          listModels: boom,
+          listRepositories: boom,
+          archiveAgent: boom,
+          unarchiveAgent: boom,
+          deleteAgent: boom,
+        },
+      }),
+    ),
+  );
+});
 
 it.effect("mock agent sendSequence advances per send", () =>
   Effect.gen(function* () {

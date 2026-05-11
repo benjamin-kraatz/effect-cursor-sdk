@@ -1,5 +1,5 @@
 import { expect, it } from "@effect/vitest";
-import { ConfigProvider, Effect, Redacted } from "effect";
+import { ConfigProvider, Effect, Logger, Redacted } from "effect";
 import {
   agentOptionsFromConfig,
   CursorApiKey,
@@ -51,4 +51,20 @@ it.effect("loadCursorConfig preserves empty string model and cwd from provider",
       }),
     ),
   ),
+);
+
+it.effect("loadCursorConfig logs a warning when CURSOR_API_KEY is unset", () =>
+  Effect.gen(function* () {
+    const messages: unknown[] = [];
+    const capture = Logger.make<unknown, void>((opts) => {
+      messages.push(opts.message);
+    });
+    const config = yield* loadCursorConfig.pipe(Effect.provide(Logger.layer([capture])));
+    expect(config.apiKey).toBeUndefined();
+    const flattened = messages
+      .map((m) => (typeof m === "string" ? m : JSON.stringify(m)))
+      .join("\n");
+    expect(flattened).toContain("CURSOR_API_KEY is not set");
+    expect(flattened.toLowerCase()).toContain("unauthenticated");
+  }).pipe(Effect.provideService(ConfigProvider.ConfigProvider, ConfigProvider.fromUnknown({}))),
 );
