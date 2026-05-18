@@ -476,6 +476,28 @@ it("CursorRunService.streamStatusChanges yields status updates", async () => {
   );
 });
 
+it("CursorRunService.streamStatusChanges fails when status subscription cannot start", async () => {
+  const run = makeMockRun({
+    stream: [],
+    result: { id: "mock-run", status: "finished" as const },
+  });
+  const spy = vi.spyOn(run, "onDidChangeStatus").mockImplementation(() => {
+    throw new Error("subscribe failed");
+  });
+  try {
+    await expect(
+      Effect.runPromise(
+        Effect.gen(function* () {
+          const runs = yield* CursorRunService;
+          yield* runs.streamStatusChanges(run).pipe(Stream.runDrain);
+        }).pipe(Effect.provide(CursorRunService.Live)),
+      ),
+    ).rejects.toThrow("subscribe failed");
+  } finally {
+    spy.mockRestore();
+  }
+});
+
 it.effect("mock run honors runSupports overrides", () =>
   Effect.gen(function* () {
     const runs = yield* CursorRunService;
@@ -488,6 +510,21 @@ it.effect("mock run honors runSupports overrides", () =>
     expect(runs.supports(run, "cancel")).toBe(false);
     expect(runs.unsupportedReason(run, "cancel")).toBe("nope");
   }).pipe(Effect.provide(CursorRunService.Live)),
+);
+
+it.effect(
+  "mock run unsupportedReason defaults when operation is unsupported without a reason",
+  () =>
+    Effect.gen(function* () {
+      const runs = yield* CursorRunService;
+      const run = makeMockRun({
+        stream: [],
+        result: { id: "mock-run", status: "finished" },
+        runSupports: { cancel: false },
+      });
+      expect(runs.supports(run, "cancel")).toBe(false);
+      expect(runs.unsupportedReason(run, "cancel")).toBe("unsupported in mock");
+    }).pipe(Effect.provide(CursorRunService.Live)),
 );
 
 it.effect("makeMockSdkFactoryLayer factoryErrors reject create", () =>
@@ -600,6 +637,9 @@ it("makeMockAssistantSdkMessage builds assistant event", () => {
   expect(msg.type).toBe("assistant");
   expect(msg.agent_id).toBe("a");
   expect(msg.run_id).toBe("r");
+  const defaults = makeMockAssistantSdkMessage("x");
+  expect(defaults.agent_id).toBe("mock-agent");
+  expect(defaults.run_id).toBe("mock-run");
 });
 
 it.effect("mock run supports cancellation and status listeners", () =>
