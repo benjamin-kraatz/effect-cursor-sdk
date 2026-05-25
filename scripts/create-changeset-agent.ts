@@ -110,7 +110,10 @@ export function changesetFilesFromEntries(
  * prevents synchronize events from producing duplicate files.
  */
 export function changedChangesetsFromFiles(changedFiles: ReadonlyArray<string>) {
-  return changedFiles.filter((file) => file.startsWith(".changeset/") && file.endsWith(".md"));
+  return changedFiles.filter(
+    (file) =>
+      file.startsWith(".changeset/") && file.endsWith(".md") && !file.endsWith("README.md"),
+  );
 }
 
 export function newChangesets(before: ReadonlyArray<string>, after: ReadonlyArray<string>) {

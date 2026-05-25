@@ -43,6 +43,10 @@ describe("create-changeset-agent policy", () => {
     ).toEqual([".changeset/add-agent.md"]);
   });
 
+  it("ignores .changeset/README.md when detecting PR changesets", () => {
+    expect(changedChangesetsFromFiles([".changeset/README.md"])).toEqual([]);
+  });
+
   it("lists changeset files while ignoring directories and README.md", () => {
     expect(
       changesetFilesFromEntries([
