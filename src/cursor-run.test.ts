@@ -1,5 +1,6 @@
 import { expect, it } from "@effect/vitest";
-import { Effect } from "effect";
+import { Effect, Exit, Stream } from "effect";
+import { vi } from "vitest";
 
 import { makeMockRun } from "./cursor-mock";
 import { CursorRunService } from "./cursor-run";
@@ -122,5 +123,24 @@ it.effect("collectText ignores non-assistant stream events while concatenating t
       makeMockRun({ stream, result: { id: "mock-run", status: "finished" } }),
     );
     expect(text).toBe("firstsecond");
+  }).pipe(Effect.provide(CursorRunService.Live)),
+);
+
+it.effect("streamStatusChanges fails when status listener registration throws", () =>
+  Effect.gen(function* () {
+    const runs = yield* CursorRunService;
+    const run = makeMockRun({
+      stream: [],
+      result: { id: "mock-run", status: "finished" },
+    });
+    const spy = vi.spyOn(run, "onDidChangeStatus").mockImplementation(() => {
+      throw new Error("subscribe failed");
+    });
+    try {
+      const exit = yield* runs.streamStatusChanges(run).pipe(Stream.runDrain, Effect.exit);
+      expect(Exit.isFailure(exit)).toBe(true);
+    } finally {
+      spy.mockRestore();
+    }
   }).pipe(Effect.provide(CursorRunService.Live)),
 );
