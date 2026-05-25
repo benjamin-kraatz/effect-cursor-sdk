@@ -1,5 +1,11 @@
 # effect-cursor-sdk
 
+## 0.3.2
+
+### Patch Changes
+
+- [#1](https://github.com/benjamin-kraatz/effect-cursor-sdk/pull/1) [`91ec6dc`](https://github.com/benjamin-kraatz/effect-cursor-sdk/commit/91ec6dcf164d56a95da4d52a0aed1b7c64d4db17) Thanks [@benjamin-kraatz](https://github.com/benjamin-kraatz)! - Document the PR changeset agent workflow, fix the workflow commit guard to detect new untracked changeset files, and refresh README examples (streaming snippets, Effect integration).
+
 ## 0.3.1
 
 ### Patch Changes
