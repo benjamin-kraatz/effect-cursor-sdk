@@ -172,9 +172,8 @@ export function makeProgram(env: NodeJS.ProcessEnv = process.env) {
     const cwd = cwdFromEnv(env);
 
     const before = yield* listChangesets(cwd);
-    const existingChangedChangesets = changedChangesetsFromFiles(
-      yield* listChangedFiles(baseRef, cwd),
-    );
+    const changedFiles = yield* listChangedFiles(baseRef, cwd);
+    const existingChangedChangesets = changedChangesetsFromFiles(changedFiles);
 
     if (existingChangedChangesets.length > 0) {
       yield* Effect.logInfo(
@@ -182,8 +181,6 @@ export function makeProgram(env: NodeJS.ProcessEnv = process.env) {
       );
       return;
     }
-
-    const changedFiles = yield* listChangedFiles(baseRef, cwd);
 
     if (changedFiles.length === 0) {
       yield* Effect.logInfo(`No changes detected against ${baseRef}.`);
