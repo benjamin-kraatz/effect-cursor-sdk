@@ -490,6 +490,20 @@ it.effect("mock run honors runSupports overrides", () =>
   }).pipe(Effect.provide(CursorRunService.Live)),
 );
 
+it.effect(
+  "mock run unsupportedReason falls back when operation is disabled without a custom reason",
+  () =>
+    Effect.gen(function* () {
+      const runs = yield* CursorRunService;
+      const run = makeMockRun({
+        stream: [],
+        result: { id: "mock-run", status: "finished" },
+        runSupports: { cancel: false },
+      });
+      expect(runs.unsupportedReason(run, "cancel")).toBe("unsupported in mock");
+    }).pipe(Effect.provide(CursorRunService.Live)),
+);
+
 it.effect("makeMockSdkFactoryLayer factoryErrors reject create", () =>
   Effect.gen(function* () {
     const agents = yield* CursorAgentService;
@@ -600,6 +614,12 @@ it("makeMockAssistantSdkMessage builds assistant event", () => {
   expect(msg.type).toBe("assistant");
   expect(msg.agent_id).toBe("a");
   expect(msg.run_id).toBe("r");
+});
+
+it("makeMockAssistantSdkMessage defaults agent and run ids when omitted", () => {
+  const msg = makeMockAssistantSdkMessage("hello");
+  expect(msg.agent_id).toBe("mock-agent");
+  expect(msg.run_id).toBe("mock-run");
 });
 
 it.effect("mock run supports cancellation and status listeners", () =>

@@ -1,9 +1,9 @@
 import { expect, it } from "@effect/vitest";
-import { Effect } from "effect";
+import { Effect, Exit, Stream } from "effect";
 
 import { makeMockRun } from "./cursor-mock";
 import { CursorRunService } from "./cursor-run";
-import type { SDKMessage } from "./cursor-types";
+import type { Run, SDKMessage } from "./cursor-types";
 
 it.effect("collectText joins text across assistant stream events", () =>
   Effect.gen(function* () {
@@ -122,5 +122,18 @@ it.effect("collectText ignores non-assistant stream events while concatenating t
       makeMockRun({ stream, result: { id: "mock-run", status: "finished" } }),
     );
     expect(text).toBe("firstsecond");
+  }).pipe(Effect.provide(CursorRunService.Live)),
+);
+
+it.effect("streamStatusChanges fails when status listener registration throws", () =>
+  Effect.gen(function* () {
+    const runs = yield* CursorRunService;
+    const badRun = {
+      onDidChangeStatus: () => {
+        throw new Error("listener registration failed");
+      },
+    } as unknown as Run;
+    const exit = yield* runs.streamStatusChanges(badRun).pipe(Stream.runDrain, Effect.exit);
+    expect(Exit.isFailure(exit)).toBe(true);
   }).pipe(Effect.provide(CursorRunService.Live)),
 );
