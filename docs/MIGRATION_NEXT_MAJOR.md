@@ -4,7 +4,7 @@ This mirrors [DEPRECATIONS.md](../DEPRECATIONS.md) at a high level. **No breakin
 
 ## Agent entry renames
 
-| Current (0.2.x)                                 | Planned after removing deprecated overloads |
+| Current (0.3.x)                                 | Planned after removing deprecated overloads |
 | ----------------------------------------------- | ------------------------------------------- |
 | `createFromConfig(config, overrides?)`          | `create(config, overrides?)`                |
 | `resumeFromConfig(agentId, config, overrides?)` | `resume(agentId, config, overrides?)`       |
