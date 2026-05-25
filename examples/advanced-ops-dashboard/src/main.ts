@@ -1,3 +1,4 @@
+import { Data, Effect, Match, Metric, Schedule, Stream } from "effect";
 import {
   CursorAgentService,
   CursorInspectionService,
@@ -9,12 +10,22 @@ import {
   makeMockRuntime,
   redact,
 } from "effect-cursor-sdk";
-import { Config, Effect, Metric, Schedule, Stream } from "effect";
 
 import { fixtures } from "./fixtures";
 import { agentSummary, printInventory } from "./render";
 
 type LifecycleAction = "archive" | "unarchive" | "delete";
+
+class LifecycleAgentIdRequiredError extends Data.TaggedError("LifecycleAgentIdRequiredError")<{
+  readonly message: string;
+  readonly lifecycle: LifecycleAction;
+}> {}
+
+class LifecycleConfirmationError extends Data.TaggedError("LifecycleConfirmationError")<{
+  readonly message: string;
+  readonly action: LifecycleAction;
+  readonly agentId: string;
+}> {}
 
 interface CliOptions {
   readonly agentId?: string;
@@ -189,9 +200,11 @@ const runLifecycle = (
 
     const typed = options.confirm ?? (yield* readConfirmation);
     if (typed !== phrase) {
-      return yield* Effect.fail(
-        new Error("Confirmation phrase did not match; no lifecycle action was run."),
-      );
+      return yield* new LifecycleConfirmationError({
+        message: "Confirmation phrase did not match; no lifecycle action was run.",
+        action: options.lifecycle,
+        agentId: options.agentId,
+      });
     }
 
     if (options.lifecycle === "archive") {
@@ -205,55 +218,67 @@ const runLifecycle = (
     return `${options.lifecycle} completed for ${options.agentId}`;
   });
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null;
-
-const messageFromUnknown = (value: object): string => {
-  if ("message" in value && typeof (value as { message: unknown }).message === "string") {
-    return (value as { message: string }).message;
-  }
-  return String(value);
-};
-
 /**
- * Map SDK / config tagged failures to plain `Error` at the CLI boundary.
- * Avoids `Effect.catchTag` chains that narrow the error channel in ways that
- * break inference for `ManagedRuntime.runPromise`.
+ * Map some Cursor SDK errors to CLI errors for better user experience, enriched with more context.
  */
-const remapProgramFailure = (error: unknown): Effect.Effect<never, Error, never> => {
-  if (error instanceof Config.ConfigError) {
-    return Effect.fail(new Error(`Environment configuration error: ${error.message}`));
-  }
-  if (isRecord(error) && typeof error._tag === "string") {
-    const msg = messageFromUnknown(error);
-    switch (error._tag) {
-      case "CursorAuthenticationError":
-        return Effect.fail(new Error(`Cursor authentication failed: ${msg}`));
-      case "CursorConfigurationError":
-        return Effect.fail(new Error(`Cursor configuration is invalid: ${msg}`));
-      case "CursorIntegrationNotConnectedError": {
-        const helpUrl = error.helpUrl;
-        const help = typeof helpUrl === "string" && helpUrl.length > 0 ? ` (${helpUrl})` : "";
-        return Effect.fail(new Error(`Cursor integration is not connected: ${msg}${help}`));
+const toCliError = (error: {
+  readonly _tag: string;
+  readonly message: string;
+  readonly provider?: string;
+  readonly helpUrl?: string;
+}): Error => {
+  return Match.value(error._tag).pipe(
+    Match.when("CursorAuthenticationError", () => {
+      return new Error(
+        `${error.message}\n\nSet CURSOR_API_KEY in .env or your environment, or run with --mock for offline demos.`,
+      );
+    }),
+    Match.when("ConfigError", () => {
+      return new Error(
+        `${error.message}\n\nInvalid Cursor configuration for triage. Check .env values such as CURSOR_MODEL and CURSOR_LOCAL_CWD.`,
+      );
+    }),
+    Match.when("CursorConfigurationError", () => {
+      return new Error(
+        `${error.message}\n\nCheck agent options such as CURSOR_MODEL and the local working directory used by --triage.`,
+      );
+    }),
+    Match.when("CursorIntegrationNotConnectedError", () => {
+      const lines = [error.message];
+      if (error.provider !== undefined) {
+        lines.push(`Provider: ${error.provider}`);
       }
-      case "CursorNetworkError":
-        return Effect.fail(new Error(`Cursor network error: ${msg}`));
-      case "CursorRateLimitError":
-        return Effect.fail(new Error(`Cursor rate limit reached: ${msg}`));
-      case "CursorAgentBusyError":
-        return Effect.fail(new Error(`Cursor agent is busy (active run in progress): ${msg}`));
-      case "CursorStreamError":
-        return Effect.fail(new Error(`Cursor run stream error: ${msg}`));
-      case "CursorUnknownError":
-        return Effect.fail(new Error(`Cursor error: ${msg}`));
-      default:
-        break;
-    }
-  }
-  if (error instanceof Error) {
-    return Effect.fail(error);
-  }
-  return Effect.fail(new Error(String(error)));
+      if (error.helpUrl !== undefined) {
+        lines.push(`Connect integration: ${error.helpUrl}`);
+      }
+      lines.push("Repository listing requires a connected SCM integration.");
+      return new Error(lines.join("\n"));
+    }),
+    Match.when("CursorRateLimitError", () => {
+      return new Error(`${error.message}\n\nRate limited by Cursor. Wait and retry later.`);
+    }),
+    Match.when("TimeoutError", () => {
+      return new Error(
+        `${error.message}\n\nLoading account inventory timed out after 45 seconds. Retry, or use --mock to test without live API calls.`,
+      );
+    }),
+    Match.when("CursorStreamError", () => {
+      return new Error(
+        `${error.message}\n\nTriage streaming failed. Retry with --triage, or run without it to confirm inventory loading works.`,
+      );
+    }),
+    Match.when("CursorNetworkError", () => {
+      return new Error(`${error.message}\n\nNetwork error after inventory retries were exhausted.`);
+    }),
+    Match.when("CursorUnknownError", () => {
+      return new Error(
+        `${error.message}\n\nUnexpected failure. Try --mock to isolate SDK wiring from live API issues.`,
+      );
+    }),
+    Match.orElse(() => {
+      return error instanceof Error ? error : new Error(error.message);
+    }),
+  );
 };
 
 const program = (options: CliOptions) =>
@@ -261,7 +286,10 @@ const program = (options: CliOptions) =>
     Effect.gen(function* () {
       if (options.lifecycle) {
         if (!options.agentId) {
-          return yield* Effect.fail(new Error("--agent-id is required for lifecycle commands."));
+          return yield* new LifecycleAgentIdRequiredError({
+            message: "--agent-id is required for lifecycle commands.",
+            lifecycle: options.lifecycle,
+          });
         }
         return yield* runLifecycle({
           agentId: options.agentId,
@@ -281,6 +309,7 @@ const program = (options: CliOptions) =>
 
       yield* printInventory(inventory);
 
+      // @effect-diagnostics-next-line preferSchemaOverJson:off - That's necessary here, as we don't have an exact schema at this point.
       const rendered = ["Redacted diagnostics:", JSON.stringify(safeSummary, null, 2)].join("\n");
 
       if (!options.triage) return rendered;
@@ -288,7 +317,7 @@ const program = (options: CliOptions) =>
       const triage = yield* runTriage(rendered);
       return `${rendered}\n\nTriage\n------\n${triage.trim()}`;
     }),
-  ).pipe(Effect.catch(remapProgramFailure));
+  ).pipe(Effect.mapError(toCliError));
 
 const options = parseArgs(process.argv.slice(2));
 if (options.help) {

@@ -100,7 +100,9 @@ export class CursorConfigurationError extends Data.TaggedError(
  * @see {@link mapCursorError}
  * @category errors
  */
-export class CursorAgentBusyError extends Data.TaggedError("CursorAgentBusyError")<CursorErrorFields> {}
+export class CursorAgentBusyError extends Data.TaggedError(
+  "CursorAgentBusyError",
+)<CursorErrorFields> {}
 
 /**
  * SCM integration is not connected for a requested cloud repository.
