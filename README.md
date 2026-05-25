@@ -1,6 +1,6 @@
 # effect-cursor-sdk
 
-![npm](https://img.shields.io/npm/v/effect-cursor-sdk) ![License MIT](https://img.shields.io/github/license/benjamin-kraatz/effect-cursor-sdk) ![CI](https://img.shields.io/github/actions/workflow/status/benjamin-kraatz/effect-cursor-sdk/ci.yml) ![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/benjamin-kraatz/effect-cursor-sdk?utm_source=oss&utm_medium=github&utm_campaign=benjamin-kraatz%2Feffect-cursor-sdk&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews)
+[![npm](https://img.shields.io/npm/v/effect-cursor-sdk)](https://www.npmjs.com/package/effect-cursor-sdk) ![License MIT](https://img.shields.io/github/license/benjamin-kraatz/effect-cursor-sdk) ![CI](https://img.shields.io/github/actions/workflow/status/benjamin-kraatz/effect-cursor-sdk/ci.yml) ![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/benjamin-kraatz/effect-cursor-sdk?utm_source=oss&utm_medium=github&utm_campaign=benjamin-kraatz%2Feffect-cursor-sdk&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews)
 
 Effect-native access to the new [Cursor SDK](https://cursor.com/docs/sdk/typescript).
 
@@ -11,18 +11,34 @@ If you want to build with Cursor agents, and you are using Effect, this package 
 > [!WARNING]
 > This project is in early development. While all functionality is available, there is still much room for improvement. Contributions are welcome!
 
+## Philosophy
+
+- SDK-first: every public `@cursor/sdk` capability should be usable through this package.
+- Effect-native: APIs return `Effect`, `Stream`, `Context.Service`, and `Layer` values.
+- Type-preserving: SDK data types are re-exported instead of rebuilt.
+- Resource-safe: scoped helpers make it easy to dispose agents correctly.
+- Observable: SDK calls are wrapped in spans and metrics with secret redaction utilities.
+- Testable: mock layers and fixtures let applications test Cursor workflows without network calls.
+
+## Documentation
+
+- [SDK coverage & compatibility](./docs/SDK_COVERAGE.md) — wrapper checklist, audit script, release alignment
+- [Recipes](./docs/RECIPES.md) — short patterns (config-first agent, streaming, pagination, lifecycle, tests)
+- [Release checklist](./docs/RELEASE_CHECKLIST.md) — gates, SDK bumps, Changesets
+- [Next major migration (planned)](./docs/MIGRATION_NEXT_MAJOR.md) — config-first renames after deprecations are removed
+
 ## Feature Coverage
 
 | SDK capability                                                                   | Effect wrapper                                 |
 | -------------------------------------------------------------------------------- | ---------------------------------------------- |
 | `Agent.create`, `Agent.resume`, `Agent.prompt`                                   | `CursorAgentService`                           |
 | `agent.send`, `reload`, `close`, async dispose                                   | `CursorAgentService`                           |
-| `run.wait`, `stream`, `conversation`, `cancel`, status listeners, support checks | `CursorRunService`                             |
+| `run.wait`, `stream`, `conversation`, `cancel`, status listeners / streams, support checks | `CursorRunService`                             |
 | `agent.listArtifacts`, `downloadArtifact`                                        | `CursorArtifactService`                        |
 | `Agent.list`, `get`, `listRuns`, `getRun`, messages                              | `CursorInspectionService`                      |
 | `Agent.archive`, `unarchive`, `delete`                                           | `CursorInspectionService`                      |
 | `Cursor.me`, models, repositories                                                | `CursorInspectionService`                      |
-| MCP servers, sub-agents, local/cloud options, model options                      | SDK-owned `AgentOptions` and re-exported types |
+| MCP servers, sub-agents, local/cloud options, model options                      | Defaults via `CursorConfig` / `loadCursorConfig`; merged SDK `AgentOptions` ([deprecated](./DEPRECATIONS.md) at agent entry) |
 | Local run event helpers and platform helpers                                     | Re-exported from `@cursor/sdk`                 |
 
 ## Use cases
@@ -45,18 +61,44 @@ bun run typecheck
 bun run test
 ```
 
+## Examples
+
+The [`examples`](./examples) directory contains a guided learning path from a
+minimal first script to production-style Effect composition:
+
+| Example | What it demonstrates |
+| --- | --- |
+| [`quickstart`](./examples/quickstart) | First config-first local agent call with `loadCursorConfig`, `agentOptionsFromConfig`, and `collectText`. |
+| [`cli`](./examples/cli) | A small terminal app with `liveRuntime`, offline `makeMockRuntime`, CLI overrides, and tagged error handling. |
+| [`basic-agent-workflow`](./examples/basic-agent-workflow) | Scoped agents, run status listeners, streaming, capability checks, and artifact listing/downloads. |
+| [`advanced-ops-dashboard`](./examples/advanced-ops-dashboard) | Inspection APIs, confirmation-gated lifecycle operations, parallel Effect composition, retries/timeouts, telemetry, redaction, and rich mocks. |
+
+Run all example typechecks from the repo root:
+
+```bash
+bun run examples:typecheck
+```
+
 ## Quick Start
 
+Load environment defaults with `loadCursorConfig`, then create agents with `createFromConfig` (and `scopedFromConfig`, `promptFromConfig`, `resumeFromConfig` as needed). The API key stays in `Redacted` form until the merge step; `AgentOptions.apiKey` remains a plain string at the SDK boundary.
+
 ```ts
-import { CursorAgentService, CursorRunService, liveLayer } from "effect-cursor-sdk";
+import {
+  CursorAgentService,
+  CursorRunService,
+  loadCursorConfig,
+  liveLayer,
+} from "effect-cursor-sdk";
 import { Effect } from "effect";
 
 const program = Effect.gen(function* () {
   const agents = yield* CursorAgentService;
   const runs = yield* CursorRunService;
 
-  const agent = yield* agents.create({
-    apiKey: process.env.CURSOR_API_KEY,
+  const config = yield* loadCursorConfig;
+  const agent = yield* agents.createFromConfig(config, {
+    // Override the given config optionally with custom values
     model: { id: "composer-2" },
     local: { cwd: process.cwd() },
   });
@@ -69,56 +111,50 @@ const program = Effect.gen(function* () {
 }).pipe(Effect.provide(liveLayer));
 ```
 
-`AgentOptions.apiKey` is a plain string at the SDK boundary. To keep the key in `Redacted` form until that boundary, read `CURSOR_API_KEY` (and optional `CURSOR_MODEL`, `CURSOR_LOCAL_CWD`) with `loadCursorConfig`, then merge into `AgentOptions` with `agentOptionsFromConfig`.
-In a future version, we might drop the plain `AgentOptions` boundary and require all options to be passed through `CursorConfig` / `loadCursorConfig` / `agentOptionsFromConfig`.
-
 Effect’s default `ConfigProvider` reads `process.env`, so you usually do not need to install a custom provider for this.
 
-### Quick start with `loadCursorConfig`
+If you need full control over the merge into SDK options, you can still call `agentOptionsFromConfig` yourself and pass the result to deprecated `create`; prefer `createFromConfig` in application code.
+
+## Plain `AgentOptions` at the agent boundary (deprecated)
+
+Passing raw `AgentOptions` (for example `apiKey: process.env.CURSOR_API_KEY`) to `create`, `resume`, `prompt`, or `scoped` is **deprecated**. It still works for compatibility, but prefer the config flow above.
 
 ```ts
-import {
-  CursorAgentService,
-  CursorRunService,
-  agentOptionsFromConfig,
-  loadCursorConfig,
-  liveLayer,
-} from "effect-cursor-sdk";
+import { CursorAgentService, CursorRunService, liveLayer } from "effect-cursor-sdk";
 import { Effect } from "effect";
 
-const program = Effect.gen(function* () {
+const legacyProgram = Effect.gen(function* () {
   const agents = yield* CursorAgentService;
   const runs = yield* CursorRunService;
 
-  const config = yield* loadCursorConfig;
-  const agent = yield* agents.create(
-    // Flexible: use the config from the environment, and override with local options.
-    agentOptionsFromConfig(config, {
-      model: { id: "composer-2" },
-      local: { cwd: process.cwd() },
-    }),
-  );
+  const agent = yield* agents.create({
+    apiKey: process.env.CURSOR_API_KEY,
+    model: { id: "composer-2" },
+    local: { cwd: process.cwd() },
+  });
 
   const run = yield* agents.send(agent, "Explain this repository");
   const text = yield* runs.collectText(run);
-
   yield* agents.dispose(agent);
   return text;
 }).pipe(Effect.provide(liveLayer));
 ```
 
+Migrate by replacing `agents.create({ ... })` with `const config = yield* loadCursorConfig` and `agents.createFromConfig(config, { ... })` (or the other `*FromConfig` helpers).
+
 ## Scoped Agents
 
-Prefer `scoped` when an agent should be disposed automatically:
+Prefer `scopedFromConfig` when an agent should be disposed automatically:
 
 ```ts
-import { CursorAgentService, liveLayer } from "effect-cursor-sdk";
+import { CursorAgentService, loadCursorConfig, liveLayer } from "effect-cursor-sdk";
 import { Effect } from "effect";
 
 const program = Effect.scoped(
   Effect.gen(function* () {
     const agents = yield* CursorAgentService;
-    const agent = yield* agents.scoped({
+    const config = yield* loadCursorConfig;
+    const agent = yield* agents.scopedFromConfig(config, {
       model: { id: "composer-2" },
       local: { cwd: process.cwd() },
     });
@@ -130,11 +166,11 @@ const program = Effect.scoped(
 
 ## Cloud Agents
 
-Cloud options are passed through as SDK `AgentOptions`:
+Cloud options are merged as SDK overrides on top of loaded config:
 
 ```ts
-const agent = yield* agents.create({
-  apiKey: process.env.CURSOR_API_KEY,
+const config = yield* loadCursorConfig;
+const agent = yield* agents.createFromConfig(config, {
   model: { id: "composer-2" },
   cloud: {
     repos: [
@@ -186,12 +222,13 @@ const repos = yield* inspection.listRepositories();
 
 Because every Cursor call is an `Effect`, you compose it like the rest of your program: parallel requests, timeouts, retries, logging, and layers all work the same way.
 
-This agent garden snapshot loads your catalog in parallel, adds a resilient boundary around the batch, logs a safe summary (counts and IDs only — never log API keys), then asks Cursor for a one-shot triage opinion via `prompt`:
+This agent garden snapshot loads your catalog in parallel, adds a resilient boundary around the batch, logs a safe summary (counts and IDs only — never log API keys), then asks Cursor for a one-shot triage opinion via `promptFromConfig`:
 
 ```ts
 import {
   CursorAgentService,
   CursorInspectionService,
+  loadCursorConfig,
   liveLayer,
 } from "effect-cursor-sdk";
 import { Effect, Schedule } from "effect";
@@ -199,6 +236,7 @@ import { Effect, Schedule } from "effect";
 const agentGardenSnapshot = Effect.gen(function* () {
   const inspection = yield* CursorInspectionService;
   const agents = yield* CursorAgentService;
+  const config = yield* loadCursorConfig;
 
   const catalog = yield* Effect.all(
     {
@@ -209,7 +247,7 @@ const agentGardenSnapshot = Effect.gen(function* () {
     { concurrency: "unbounded" },
   ).pipe(
     Effect.retry(
-      Schedule.exponential("150 millis").pipe(Schedule.compose(Schedule.recurs(3))),
+      Schedule.exponential("150 millis").pipe(Schedule.both(Schedule.recurs(3))),
     ),
     Effect.timeout("45 seconds"),
   );
@@ -220,7 +258,7 @@ const agentGardenSnapshot = Effect.gen(function* () {
     repos: catalog.repos.length,
   });
 
-  const triage = yield* agents.prompt(
+  const triage = yield* agents.promptFromConfig(
     [
       "You are helping on-call. Here is non-secret inventory:",
       `- Cloud agents (ids): ${catalog.cloud.items.map((a) => a.agentId).join(", ") || "(none)"}`,
@@ -228,8 +266,8 @@ const agentGardenSnapshot = Effect.gen(function* () {
       `- Repos (urls): ${catalog.repos.map((r) => r.url).join(", ") || "(none)"}`,
       "In two short sentences: what should we verify first before trusting automation here?",
     ].join("\n"),
+    config,
     {
-      apiKey: process.env.CURSOR_API_KEY,
       model: { id: "composer-2" },
     },
   );
@@ -266,12 +304,13 @@ Never log API keys, MCP credentials, authorization headers, or prompt image data
 Use `mockLayer` for deterministic tests:
 
 ```ts
-import { CursorAgentService, mockLayer } from "effect-cursor-sdk";
+import { CursorAgentService, loadCursorConfig, mockLayer } from "effect-cursor-sdk";
 import { Effect } from "effect";
 
 const testProgram = Effect.gen(function* () {
   const agents = yield* CursorAgentService;
-  const agent = yield* agents.create({ model: { id: "composer-2" } });
+  const config = yield* loadCursorConfig;
+  const agent = yield* agents.createFromConfig(config, { model: { id: "composer-2" } });
   return yield* agents.send(agent, "Hello");
 }).pipe(
   Effect.provide(
@@ -286,11 +325,13 @@ const testProgram = Effect.gen(function* () {
 
 The main exports are:
 
-- `CursorAgentService`
+- **Recipes** — common compositions (prompt text, send + collect, pagination, lifecycle guards, artifacts) in [RECIPES.md](./docs/RECIPES.md)
+- **Observability helpers** (`streamEventsTracked`, `collectTextTracked`, catalog retry/timeout presets, log summaries)
+- `CursorAgentService` (prefer `createFromConfig`, `scopedFromConfig`, `promptFromConfig`, `resumeFromConfig` with `loadCursorConfig`; plain `AgentOptions` at the agent boundary is [deprecated](./DEPRECATIONS.md))
 - `CursorRunService`
 - `CursorArtifactService`
 - `CursorInspectionService`
-- `CursorSdkFactory`
+- `CursorSdkFactory` ([deprecated for application code](./DEPRECATIONS.md#other-deprecations); low-level tests and overrides)
 - `liveLayer`, `mockLayer`, `liveRuntime`, `makeMockRuntime`
 - `CursorConfig`, `cursorConfig`, `agentOptionsFromConfig`, `loadCursorConfig`
 - tagged Cursor error classes and `mapCursorError`
@@ -302,6 +343,7 @@ Use generated TypeScript declarations for exact signatures.
 
 ```bash
 bun run typecheck
+bun run sdk-audit
 bun run lint
 bun run format:check
 bun run test
@@ -310,7 +352,13 @@ bun run build
 bun run lint:package
 ```
 
+After a `@cursor/sdk` bump, if `sdk-audit` fails, review [docs/SDK_COVERAGE.md](./docs/SDK_COVERAGE.md) and refresh the baseline only when drift is intentional: `bun run sdk-audit:refresh`.
+
 Coverage is measured with Vitest v8 coverage. The suite focuses on deterministic wrapper behavior; live SDK network paths should be validated separately with credentials and a disposable repository.
+
+## Deprecations
+
+Whenever you need a single place for what is deprecated, what to use instead, how to migrate, and what may change in the next major (when that is already decided), read **[DEPRECATIONS.md](./DEPRECATIONS.md)**. Pair it with **[CHANGELOG.md](./CHANGELOG.md)** for release-by-release notes; `@deprecated` tags on exported symbols mirror the same intent for day-to-day coding.
 
 ## Versioning and Publishing
 
@@ -345,4 +393,4 @@ bun run version
 bun run release
 ```
 
-`bun run release` runs `typecheck`, `lint`, `test`, `build`, and `publint` before publishing to NPM.
+`bun run release` runs `verify:publish` (including `sdk-audit`) before publishing to NPM.

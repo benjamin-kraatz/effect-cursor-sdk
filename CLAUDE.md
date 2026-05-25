@@ -34,3 +34,17 @@ Here are some known conflicts:
 
 The Effect _v4_ repository is cloned to `~/.local/share/effect-solutions/effect` for reference.
 Use this to explore APIs, find usage examples, and understand implementation details when the documentation isn't enough.
+
+## Cursor Cloud specific instructions
+
+This is a single-package Bun-based TypeScript library (not a monorepo, not a web application). No external services are required.
+
+**Runtime:** Bun 1.3.12 (must be on `$PATH` via `$HOME/.bun/bin`).
+
+**Quality gates** (see `package.json` scripts): `bun run typecheck`, `bun run lint`, `bun run format:check`, `bun run test`, `bun run build`, `bun run lint:package`. CI runs these in that order.
+
+**Testing:** All tests use deterministic mocks (`mockLayer`/`makeMockRuntime`); no network, no `CURSOR_API_KEY` needed. Run `bun run test` (vitest). Coverage: `bun run test:coverage` (80% threshold).
+
+**`prepare` hook:** `bun install` automatically runs `effect-language-service patch`, which patches the local TypeScript install. This is expected and idempotent.
+
+**Linting & formatting:** Uses `oxlint` (not ESLint) and `oxfmt` (not Prettier).

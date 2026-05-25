@@ -11,6 +11,7 @@ export * from "./cursor-config";
 export * from "./cursor-error";
 export * from "./cursor-inspection";
 export * from "./cursor-mock";
+export * from "./cursor-observability";
 export * from "./cursor-run";
 export * from "./cursor-runtime";
 export * from "./cursor-sdk-factory";

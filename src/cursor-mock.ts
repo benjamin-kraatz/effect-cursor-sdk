@@ -42,6 +42,22 @@ import type {
  * @see {@link makeMockSdkFactoryLayer}
  * @category testing
  */
+export type CursorMockFactoryMethod =
+  | "create"
+  | "resume"
+  | "prompt"
+  | "listAgents"
+  | "listRuns"
+  | "getRun"
+  | "getAgent"
+  | "archiveAgent"
+  | "unarchiveAgent"
+  | "deleteAgent"
+  | "listMessages"
+  | "me"
+  | "listModels"
+  | "listRepositories";
+
 export interface CursorMockFixtures {
   readonly agentId?: string;
   readonly runId?: string;
@@ -54,6 +70,19 @@ export interface CursorMockFixtures {
   readonly models?: ReadonlyArray<SDKModel>;
   readonly repositories?: ReadonlyArray<SDKRepository>;
   readonly user?: SDKUser;
+  /**
+   * Per-`send` merged fixtures. Each `MockCursorAgent.send` increments the index;
+   * when exhausted, further sends reuse the last entry merged with the base fixtures.
+   */
+  readonly sendSequence?: ReadonlyArray<Partial<CursorMockFixtures>>;
+  /**
+   * Reject a factory method with this error (Promise rejection).
+   */
+  readonly factoryErrors?: Partial<Record<CursorMockFactoryMethod, unknown>>;
+  /** Override {@link Run.supports} per operation. */
+  readonly runSupports?: Partial<Record<RunOperation, boolean>>;
+  /** Override unsupported reasons for operations marked false in {@link runSupports}. */
+  readonly runUnsupportedReason?: Partial<Record<RunOperation, string>>;
 }
 
 /**
@@ -84,6 +113,10 @@ export class MockCursorRun implements Run {
   constructor(
     readonly streamEvents: ReadonlyArray<SDKMessage>,
     readonly waitResult: RunResult,
+    readonly behavior?: {
+      readonly supports?: Partial<Record<RunOperation, boolean>>;
+      readonly unsupportedReason?: Partial<Record<RunOperation, string>>;
+    },
   ) {
     this.id = waitResult.id;
     this.agentId = streamEvents[0]?.agent_id ?? "mock-agent";
@@ -105,11 +138,13 @@ export class MockCursorRun implements Run {
   get git(): RunResult["git"] {
     return this.waitResult.git;
   }
-  supports(_operation: RunOperation): boolean {
-    return true;
+  supports(operation: RunOperation): boolean {
+    const override = this.behavior?.supports?.[operation];
+    return override !== undefined ? override : true;
   }
-  unsupportedReason(_operation: RunOperation): string | undefined {
-    return undefined;
+  unsupportedReason(operation: RunOperation): string | undefined {
+    if (this.supports(operation)) return undefined;
+    return this.behavior?.unsupportedReason?.[operation] ?? "unsupported in mock";
   }
   async *stream(): AsyncGenerator<SDKMessage, void> {
     yield* this.streamEvents;
@@ -151,6 +186,7 @@ export class MockCursorAgent implements SDKAgent {
   readonly agentId: string;
   readonly runs: Run[] = [];
   closed = false;
+  #sendIndex = 0;
 
   constructor(readonly fixtures: CursorMockFixtures = {}) {
     this.agentId = fixtures.agentId ?? "mock-agent";
@@ -161,7 +197,13 @@ export class MockCursorAgent implements SDKAgent {
   }
 
   async send(_message: string | SDKUserMessage, _options?: SendOptions): Promise<Run> {
-    const run = makeMockRun(this.fixtures);
+    const seq = this.fixtures.sendSequence;
+    const piece =
+      seq === undefined ? undefined : seq[Math.min(this.#sendIndex, Math.max(seq.length - 1, 0))];
+    const merged: CursorMockFixtures =
+      piece !== undefined ? { ...this.fixtures, ...piece } : this.fixtures;
+    if (seq !== undefined) this.#sendIndex++;
+    const run = makeMockRun(merged);
     this.runs.push(run);
     return run;
   }
@@ -193,6 +235,10 @@ export const makeMockRun = (fixtures: CursorMockFixtures = {}): MockCursorRun =>
   return new MockCursorRun(
     fixtures.stream ?? [],
     fixtures.result ?? { id: runId, status: "finished", result: "" },
+    {
+      supports: fixtures.runSupports,
+      unsupportedReason: fixtures.runUnsupportedReason,
+    },
   );
 };
 
@@ -206,6 +252,35 @@ export const makeMockRun = (fixtures: CursorMockFixtures = {}): MockCursorRun =>
  */
 export const makeMockAgent = (fixtures: CursorMockFixtures = {}): MockCursorAgent => {
   return new MockCursorAgent(fixtures);
+};
+
+/**
+ * Minimal assistant {@link SDKMessage} for streaming tests.
+ *
+ * @category testing
+ */
+export const makeMockAssistantSdkMessage = (
+  text: string,
+  ids: { readonly agentId?: string; readonly runId?: string } = {},
+): SDKMessage => {
+  return {
+    type: "assistant",
+    agent_id: ids.agentId ?? "mock-agent",
+    run_id: ids.runId ?? "mock-run",
+    message: {
+      role: "assistant",
+      content: [{ type: "text", text }],
+    },
+  };
+};
+
+const rejectFactory = (
+  fixtures: CursorMockFixtures,
+  method: CursorMockFactoryMethod,
+): Promise<never> | undefined => {
+  const err = fixtures.factoryErrors?.[method];
+  if (err !== undefined) return Promise.reject(err);
+  return undefined;
 };
 
 /**
@@ -232,26 +307,38 @@ export const makeMockSdkFactoryLayer = (fixtures: CursorMockFixtures = {}) => {
     CursorSdkFactory,
     CursorSdkFactory.of({
       create: (_options: AgentOptions): Promise<SDKAgent> => {
-        return Promise.resolve(makeMockAgent(fixtures));
+        const early = rejectFactory(fixtures, "create");
+        return early ?? Promise.resolve(makeMockAgent(fixtures));
       },
       resume: (_agentId: string, _options?: Partial<AgentOptions>): Promise<SDKAgent> => {
-        return Promise.resolve(makeMockAgent(fixtures));
+        const early = rejectFactory(fixtures, "resume");
+        return early ?? Promise.resolve(makeMockAgent(fixtures));
       },
       prompt: async (_message: string, _options?: AgentOptions): Promise<RunResult> => {
+        const early = rejectFactory(fixtures, "prompt");
+        if (early) return early;
         return (
           fixtures.result ?? { id: fixtures.runId ?? "mock-run", status: "finished", result: "" }
         );
       },
       listAgents: async (_options?: ListAgentsOptions): Promise<ListResult<SDKAgentInfo>> => {
+        const early = rejectFactory(fixtures, "listAgents");
+        if (early) return early;
         return { items: [...(fixtures.agents ?? [])] };
       },
       listRuns: async (_agentId: string, _options?: ListRunsOptions): Promise<ListResult<Run>> => {
+        const early = rejectFactory(fixtures, "listRuns");
+        if (early) return early;
         return { items: [makeMockRun(fixtures)] };
       },
       getRun: async (_runId: string, _options?: GetRunOptions): Promise<Run> => {
+        const early = rejectFactory(fixtures, "getRun");
+        if (early) return early;
         return makeMockRun(fixtures);
       },
       getAgent: async (_agentId: string, _options?: GetAgentOptions): Promise<SDKAgentInfo> => {
+        const early = rejectFactory(fixtures, "getAgent");
+        if (early) return early;
         return (
           fixtures.agents?.[0] ?? {
             agentId: fixtures.agentId ?? "mock-agent",
@@ -261,25 +348,39 @@ export const makeMockSdkFactoryLayer = (fixtures: CursorMockFixtures = {}) => {
           }
         );
       },
-      archiveAgent: async (_agentId: string, _options?: AgentOperationOptions): Promise<void> => {},
-      unarchiveAgent: async (
-        _agentId: string,
-        _options?: AgentOperationOptions,
-      ): Promise<void> => {},
-      deleteAgent: async (_agentId: string, _options?: AgentOperationOptions): Promise<void> => {},
+      archiveAgent: async (_agentId: string, _options?: AgentOperationOptions): Promise<void> => {
+        const early = rejectFactory(fixtures, "archiveAgent");
+        if (early) return early;
+      },
+      unarchiveAgent: async (_agentId: string, _options?: AgentOperationOptions): Promise<void> => {
+        const early = rejectFactory(fixtures, "unarchiveAgent");
+        if (early) return early;
+      },
+      deleteAgent: async (_agentId: string, _options?: AgentOperationOptions): Promise<void> => {
+        const early = rejectFactory(fixtures, "deleteAgent");
+        if (early) return early;
+      },
       listMessages: async (
         _agentId: string,
         _options?: GetAgentMessagesOptions,
       ): Promise<AgentMessage[]> => {
+        const early = rejectFactory(fixtures, "listMessages");
+        if (early) return early;
         return [...(fixtures.messages ?? [])];
       },
       me: async (_options?: CursorRequestOptions): Promise<SDKUser> => {
+        const early = rejectFactory(fixtures, "me");
+        if (early) return early;
         return fixtures.user ?? { apiKeyName: "mock", createdAt: "1970-01-01T00:00:00.000Z" };
       },
       listModels: async (_options?: CursorRequestOptions): Promise<SDKModel[]> => {
+        const early = rejectFactory(fixtures, "listModels");
+        if (early) return early;
         return [...(fixtures.models ?? [])];
       },
       listRepositories: async (_options?: CursorRequestOptions): Promise<SDKRepository[]> => {
+        const early = rejectFactory(fixtures, "listRepositories");
+        if (early) return early;
         return [...(fixtures.repositories ?? [])];
       },
     }),

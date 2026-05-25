@@ -33,6 +33,7 @@ import {
   agentOptionsFromConfig,
   loadCursorConfig,
   makeMockAgent,
+  makeMockAssistantSdkMessage,
   makeMockRun,
   makeMockRuntime,
   makeMockSdkFactoryLayer,
@@ -185,6 +186,16 @@ it("builds SDK options from wrapper config without replacing overrides", () => {
     local: undefined,
     model: undefined,
   });
+  expect(agentOptionsFromConfig(new CursorConfig({}), { local: {} })).toEqual({
+    apiKey: undefined,
+    local: undefined,
+    model: undefined,
+  });
+  expect(
+    agentOptionsFromConfig({ cwd: CursorLocalCwd.make("/repo") }, { local: {} }),
+  ).toMatchObject({
+    local: { cwd: "/repo" },
+  });
 });
 
 it.effect("loads Cursor config from an Effect config provider", () =>
@@ -214,6 +225,106 @@ it.effect("loads empty Cursor config when environment variables are absent", () 
     const config = yield* loadCursorConfig;
     expect(config).toEqual(new CursorConfig({}));
   }).pipe(Effect.provideService(ConfigProvider.ConfigProvider, ConfigProvider.fromUnknown({}))),
+);
+
+it.effect("config-based agent methods merge CursorConfig into SDK factory options", () =>
+  Effect.gen(function* () {
+    let createOptions: AgentOptions | undefined;
+    let resumeCall: { agentId: string; options?: Partial<AgentOptions> } | undefined;
+    let promptCall: { message: string; options?: AgentOptions } | undefined;
+
+    const config = new CursorConfig({
+      apiKey: CursorApiKey.make(Redacted.make("env-key")),
+      modelId: CursorModelId.make("from-env"),
+      cwd: CursorLocalCwd.make("/repo"),
+    });
+
+    const sdkLayer = Layer.succeed(
+      CursorSdkFactory,
+      CursorSdkFactory.of({
+        create: (options: AgentOptions) => {
+          createOptions = options;
+          return Promise.resolve(makeMockAgent());
+        },
+        resume: (agentId: string, options?: Partial<AgentOptions>) => {
+          resumeCall = { agentId, options };
+          return Promise.resolve(makeMockAgent());
+        },
+        prompt: async (message: string, options?: AgentOptions) => {
+          promptCall = { message, options };
+          return { id: "p-run", status: "finished" as const, result: "ok" };
+        },
+        listAgents: async () => ({ items: [] }),
+        listRuns: async () => ({ items: [] }),
+        getRun: async () => makeMockRun(),
+        getAgent: async () => ({
+          agentId: "x",
+          name: "x",
+          summary: "x",
+          lastModified: 0,
+        }),
+        archiveAgent: async () => undefined,
+        unarchiveAgent: async () => undefined,
+        deleteAgent: async () => undefined,
+        listMessages: async () => [],
+        me: async () => ({ apiKeyName: "m", createdAt: "now" }),
+        listModels: async () => [],
+        listRepositories: async () => [],
+      }),
+    );
+
+    const agentLayer = CursorAgentService.Live.pipe(Layer.provide(sdkLayer));
+
+    const agents = yield* Effect.gen(function* () {
+      return yield* CursorAgentService;
+    }).pipe(Effect.provide(agentLayer));
+
+    yield* agents.createFromConfig(config, {
+      model: { id: "composer-2" },
+    });
+    expect(createOptions).toMatchObject({
+      apiKey: "env-key",
+      model: { id: "composer-2" },
+      local: { cwd: "/repo" },
+    });
+
+    yield* agents.resumeFromConfig("agent-1", config, {
+      model: { id: "resume-override" },
+    });
+    expect(resumeCall).toEqual({
+      agentId: "agent-1",
+      options: expect.objectContaining({
+        apiKey: "env-key",
+        model: { id: "resume-override" },
+        local: { cwd: "/repo" },
+      }),
+    });
+
+    yield* agents.promptFromConfig("hello", config, {
+      model: { id: "prompt-model" },
+    });
+    expect(promptCall).toEqual({
+      message: "hello",
+      options: expect.objectContaining({
+        apiKey: "env-key",
+        model: { id: "prompt-model" },
+        local: { cwd: "/repo" },
+      }),
+    });
+
+    yield* Effect.scoped(
+      Effect.gen(function* () {
+        createOptions = undefined;
+        yield* agents.scopedFromConfig(config, { model: { id: "scoped-model" } });
+      }),
+    ).pipe(Effect.provide(agentLayer));
+
+    expect(createOptions).toMatchObject({
+      apiKey: "env-key",
+      model: { id: "scoped-model" },
+      local: { cwd: "/repo" },
+    });
+  }),
 );
 
 const assistantEvent: SDKMessage = {
@@ -340,6 +451,157 @@ it.effect("scopes mock agents and disposes them when the scope closes", () =>
   }),
 );
 
+it("CursorRunService.streamStatusChanges yields status updates", async () => {
+  const run = makeMockRun({
+    stream: [],
+    result: { id: "mock-run", status: "finished" as const },
+  });
+  await Effect.runPromise(
+    Effect.scoped(
+      Effect.gen(function* () {
+        const runs = yield* CursorRunService;
+        yield* Effect.forkScoped(
+          Effect.gen(function* () {
+            yield* Effect.sleep("15 millis");
+            yield* Effect.promise(() => run.cancel());
+            yield* Effect.promise(() => run.cancel());
+          }),
+        );
+        const statuses = yield* runs
+          .streamStatusChanges(run)
+          .pipe(Stream.take(2), Stream.runCollect);
+        expect(statuses).toEqual(["cancelled", "cancelled"]);
+      }),
+    ).pipe(Effect.provide(CursorRunService.Live)),
+  );
+});
+
+it.effect("mock run honors runSupports overrides", () =>
+  Effect.gen(function* () {
+    const runs = yield* CursorRunService;
+    const run = makeMockRun({
+      stream: [assistantEvent],
+      result: { id: "mock-run", status: "finished" },
+      runSupports: { cancel: false },
+      runUnsupportedReason: { cancel: "nope" },
+    });
+    expect(runs.supports(run, "cancel")).toBe(false);
+    expect(runs.unsupportedReason(run, "cancel")).toBe("nope");
+  }).pipe(Effect.provide(CursorRunService.Live)),
+);
+
+it.effect("makeMockSdkFactoryLayer factoryErrors reject create", () =>
+  Effect.gen(function* () {
+    const agents = yield* CursorAgentService;
+    const fail = yield* agents.create({ model: { id: "composer-2" } }).pipe(Effect.flip);
+    expect(fail).toMatchObject({ _tag: "CursorUnknownError" });
+  }).pipe(
+    Effect.provide(
+      mockLayer({
+        factoryErrors: { create: new Error("boom") },
+      }),
+    ),
+  ),
+);
+
+it.effect("makeMockSdkFactoryLayer factoryErrors reject static SDK factory methods", () => {
+  const boom = new Error("inspection failed");
+  return Effect.gen(function* () {
+    const sdk = yield* CursorSdkFactory;
+    yield* Effect.promise(async () => {
+      await expect(sdk.listAgents()).rejects.toBe(boom);
+      await expect(sdk.listRuns("a")).rejects.toBe(boom);
+      await expect(sdk.getRun("r")).rejects.toBe(boom);
+      await expect(sdk.getAgent("a")).rejects.toBe(boom);
+      await expect(sdk.resume("a")).rejects.toBe(boom);
+      await expect(sdk.prompt("x")).rejects.toBe(boom);
+      await expect(sdk.listMessages("a")).rejects.toBe(boom);
+      await expect(sdk.me()).rejects.toBe(boom);
+      await expect(sdk.listModels()).rejects.toBe(boom);
+      await expect(sdk.listRepositories()).rejects.toBe(boom);
+      await expect(sdk.archiveAgent("a")).rejects.toBe(boom);
+      await expect(sdk.unarchiveAgent("a")).rejects.toBe(boom);
+      await expect(sdk.deleteAgent("a")).rejects.toBe(boom);
+    });
+  }).pipe(
+    Effect.provide(
+      makeMockSdkFactoryLayer({
+        factoryErrors: {
+          listAgents: boom,
+          listRuns: boom,
+          getRun: boom,
+          getAgent: boom,
+          resume: boom,
+          prompt: boom,
+          listMessages: boom,
+          me: boom,
+          listModels: boom,
+          listRepositories: boom,
+          archiveAgent: boom,
+          unarchiveAgent: boom,
+          deleteAgent: boom,
+        },
+      }),
+    ),
+  );
+});
+
+it.effect("mock agent sendSequence advances per send", () =>
+  Effect.gen(function* () {
+    const agents = yield* CursorAgentService;
+    const runs = yield* CursorRunService;
+    const agent = yield* agents.create({ model: { id: "composer-2" } });
+    const r1 = yield* agents.send(agent, "1");
+    const r2 = yield* agents.send(agent, "2");
+    const t1 = yield* runs.collectText(r1);
+    const t2 = yield* runs.collectText(r2);
+    expect(t1).toBe("one");
+    expect(t2).toBe("two");
+  }).pipe(
+    Effect.provide(
+      mockLayer({
+        sendSequence: [
+          {
+            stream: [
+              {
+                type: "assistant",
+                agent_id: "mock-agent",
+                run_id: "r1",
+                message: {
+                  role: "assistant",
+                  content: [{ type: "text", text: "one" }],
+                },
+              },
+            ],
+            result: { id: "r1", status: "finished" as const, result: "one" },
+          },
+          {
+            stream: [
+              {
+                type: "assistant",
+                agent_id: "mock-agent",
+                run_id: "r2",
+                message: {
+                  role: "assistant",
+                  content: [{ type: "text", text: "two" }],
+                },
+              },
+            ],
+            result: { id: "r2", status: "finished" as const, result: "two" },
+          },
+        ],
+      }),
+    ),
+  ),
+);
+
+it("makeMockAssistantSdkMessage builds assistant event", () => {
+  const msg = makeMockAssistantSdkMessage("hi", { agentId: "a", runId: "r" });
+  expect(msg.type).toBe("assistant");
+  expect(msg.agent_id).toBe("a");
+  expect(msg.run_id).toBe("r");
+});
+
 it.effect("mock run supports cancellation and status listeners", () =>
   Effect.gen(function* () {
     const run = makeMockRun({
@@ -387,6 +649,48 @@ it.effect("collectText ignores non-assistant stream events", () =>
       }),
     );
     expect(text).toBe("hello");
+  }).pipe(Effect.provide(CursorRunService.Live)),
+);
+
+it.effect("collectText concatenates only text blocks inside assistant messages", () =>
+  Effect.gen(function* () {
+    const runs = yield* CursorRunService;
+    const toolOnlyAssistant: SDKMessage = {
+      type: "assistant",
+      agent_id: "mock-agent",
+      run_id: "mock-run",
+      message: {
+        role: "assistant",
+        content: [{ type: "tool_use", id: "t1", name: "read", input: { path: "/x" } }],
+      },
+    };
+    const mixedAssistant: SDKMessage = {
+      type: "assistant",
+      agent_id: "mock-agent",
+      run_id: "mock-run",
+      message: {
+        role: "assistant",
+        content: [
+          { type: "text", text: "a" },
+          { type: "tool_use", id: "t2", name: "grep", input: { q: "y" } },
+          { type: "text", text: "b" },
+        ],
+      },
+    };
+    const textFromToolOnly = yield* runs.collectText(
+      makeMockRun({
+        stream: [toolOnlyAssistant],
+        result: { id: "mock-run", status: "finished" },
+      }),
+    );
+    const textFromMixed = yield* runs.collectText(
+      makeMockRun({
+        stream: [mixedAssistant],
+        result: { id: "mock-run", status: "finished" },
+      }),
+    );
+    expect(textFromToolOnly).toBe("");
+    expect(textFromMixed).toBe("ab");
   }).pipe(Effect.provide(CursorRunService.Live)),
 );
 

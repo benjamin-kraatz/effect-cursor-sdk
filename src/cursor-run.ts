@@ -60,6 +60,15 @@ export interface CursorRunServiceShape {
     run: Run,
     listener: (status: RunStatus) => void,
   ) => Effect.Effect<() => void>;
+  /**
+   * Status updates as a stream (backed by {@link Run.onDidChangeStatus}).
+   *
+   * @example
+   * ```ts
+   *
+   * ```
+   */
+  readonly streamStatusChanges: (run: Run) => Stream.Stream<RunStatus, never, never>;
 }
 
 /**
@@ -67,8 +76,13 @@ export interface CursorRunServiceShape {
  *
  * @example
  * ```ts
+ * const runService = yield* CursorRunService;
+ *
+ * // Create a run with the agent service
  * const run = yield* agents.send(agent, "Refactor auth")
- * const text = yield* runs.collectText(run)
+ *
+ * // Use the run service with the created run
+ * const conversation = yield* runService.conversation(run);
  * ```
  *
  * @see {@link CursorAgentService} for creating and sending runs.
@@ -146,6 +160,34 @@ export class CursorRunService extends Context.Service<CursorRunService, CursorRu
         listener: (status: RunStatus) => void,
       ): Effect.Effect<() => void> => {
         return Effect.sync(() => run.onDidChangeStatus(listener));
+      },
+      streamStatusChanges: (run: Run): Stream.Stream<RunStatus, never, never> => {
+        return Stream.fromAsyncIterable(
+          (async function* (): AsyncGenerator<RunStatus> {
+            const pending: RunStatus[] = [];
+            let notify: (() => void) | undefined;
+            const unsub = run.onDidChangeStatus((status) => {
+              pending.push(status);
+              const resume = notify;
+              notify = undefined;
+              resume?.();
+            });
+            try {
+              while (true) {
+                if (pending.length > 0) {
+                  yield pending.shift()!;
+                  continue;
+                }
+                await new Promise<void>((resolve) => {
+                  notify = resolve;
+                });
+              }
+            } finally {
+              unsub();
+            }
+          })(),
+          () => undefined as never,
+        );
       },
       collectText: (run: Run): Effect.Effect<string, CursorStreamError> => {
         return Stream.fromAsyncIterable(run.stream(), (cause) => {

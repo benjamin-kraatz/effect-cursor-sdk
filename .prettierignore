@@ -1,0 +1,2 @@
+# Oxfmt merges this with .oxfmtrc.json ignorePatterns; LSP historically read this first.
+README.md
