@@ -4,9 +4,9 @@ Short patterns for common tasks. Each corresponds to an [`examples/`](../example
 
 **Design note:** This package intentionally keeps the public API centered on the four Effect services (`CursorAgentService`, `CursorRunService`, `CursorArtifactService`, `CursorInspectionService`) plus config, observability, and mocks. Common compositions live here as copy-paste recipes so you always see which service owns each step.
 
-## Config-first agent (preferred)
+## Config-first agent
 
-Use {@link loadCursorConfig} with {@link CursorAgentService.scopedFromConfig} or `createFromConfig`:
+Use {@link loadCursorConfig} with {@link CursorAgentService.scoped} or `create`:
 
 ```ts
 import { CursorAgentService, loadCursorConfig, liveLayer } from "effect-cursor-sdk";
@@ -16,7 +16,7 @@ const program = Effect.scoped(
   Effect.gen(function* () {
     const config = yield* loadCursorConfig;
     const agents = yield* CursorAgentService;
-    const agent = yield* agents.scopedFromConfig(config, {
+    const agent = yield* agents.scoped(config, {
       local: { cwd: process.cwd() },
     });
     return yield* agents.send(agent, "Summarize the repo");
@@ -24,17 +24,9 @@ const program = Effect.scoped(
 ).pipe(Effect.provide(liveLayer));
 ```
 
-Equivalent merge style (also common in examples):
-
-```ts
-import { agentOptionsFromConfig } from "effect-cursor-sdk";
-
-const agent = yield* agents.scoped(agentOptionsFromConfig(config, { local: { cwd: process.cwd() } }));
-```
-
 ## One-shot text from a prompt
 
-Use {@link CursorAgentService.promptFromConfig} and read `result` (default to empty string if absent):
+Use {@link CursorAgentService.prompt} and read `result` (default to empty string if absent):
 
 ```ts
 import { CursorAgentService, liveLayer, loadCursorConfig } from "effect-cursor-sdk";
@@ -43,7 +35,7 @@ import { Effect } from "effect";
 const program = Effect.gen(function* () {
   const config = yield* loadCursorConfig;
   const agents = yield* CursorAgentService;
-  const out = yield* agents.promptFromConfig("Hello", config, { model: { id: "composer-2" } });
+  const out = yield* agents.prompt("Hello", config, { model: { id: "composer-2" } });
   return out.result ?? "";
 }).pipe(Effect.provide(liveLayer));
 ```
@@ -61,7 +53,7 @@ const program = Effect.scoped(
     const config = yield* loadCursorConfig;
     const agents = yield* CursorAgentService;
     const runs = yield* CursorRunService;
-    const agent = yield* agents.scopedFromConfig(config, { local: { cwd: process.cwd() } });
+    const agent = yield* agents.scoped(config, { local: { cwd: process.cwd() } });
     const run = yield* agents.send(agent, "Explain Effect layers");
     return yield* runs.collectText(run);
   }),
@@ -87,7 +79,7 @@ const program = Effect.scoped(
     const agents = yield* CursorAgentService;
     const runs = yield* CursorRunService;
     const config = yield* loadCursorConfig;
-    const agent = yield* agents.scopedFromConfig(config, { local: { cwd: process.cwd() } });
+    const agent = yield* agents.scoped(config, { local: { cwd: process.cwd() } });
     const run = yield* agents.send(agent, "Hi");
     return yield* collectTextTracked(run, (r) => runs.streamEvents(r));
   }),

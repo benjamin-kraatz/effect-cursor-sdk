@@ -4,7 +4,6 @@ import {
   CursorRunService,
   type SDKArtifact,
   type SDKMessage,
-  agentOptionsFromConfig,
   liveLayer,
   loadCursorConfig,
 } from "effect-cursor-sdk";
@@ -48,11 +47,9 @@ const program = Effect.scoped(
     const runs = yield* CursorRunService;
     const artifacts = yield* CursorArtifactService;
 
-    const agent = yield* agents.scoped(
-      agentOptionsFromConfig(config, {
-        local: { cwd: process.cwd() },
-      }),
-    );
+    const agent = yield* agents.scoped(config, {
+      local: { cwd: process.cwd() },
+    });
 
     yield* heading("Sending prompt");
     yield* Effect.sync(() => console.log(prompt));

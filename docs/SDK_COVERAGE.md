@@ -19,9 +19,9 @@ Mark each row when verified against the **pinned** SDK version in root [`package
 
 | SDK surface                                       | Wrapper location                                                            | Status |
 | ------------------------------------------------- | --------------------------------------------------------------------------- | ------ |
-| `Agent.create`                                    | `CursorAgentService.create` / `createFromConfig`, `CursorSdkFactory.create` | OK     |
-| `Agent.resume`                                    | `CursorAgentService.resume` / `resumeFromConfig`, `CursorSdkFactory.resume` | OK     |
-| `Agent.prompt`                                    | `CursorAgentService.prompt` / `promptFromConfig`, `CursorSdkFactory.prompt` | OK     |
+| `Agent.create`                                    | `CursorAgentService.create`, `CursorSdkFactory.create` | OK     |
+| `Agent.resume`                                    | `CursorAgentService.resume`, `CursorSdkFactory.resume` | OK     |
+| `Agent.prompt`                                    | `CursorAgentService.prompt`, `CursorSdkFactory.prompt` | OK     |
 | `Agent.list`                                      | `CursorInspectionService.listAgents`, `CursorSdkFactory.listAgents`         | OK     |
 | `Agent.get`                                       | `CursorInspectionService.getAgent`, `CursorSdkFactory.getAgent`             | OK     |
 | `Agent.archive` / `unarchive` / `delete`          | `CursorInspectionService.archiveAgent` / `unarchiveAgent` / `deleteAgent`   | OK     |

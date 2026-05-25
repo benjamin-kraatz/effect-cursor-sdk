@@ -54,5 +54,4 @@ bun run dev -- --download-artifact summary.md "Create a summary.md artifact"
 - `CursorRunService.streamEvents`, `wait`, `onDidChangeStatus`, `supports`,
   and `unsupportedReason`.
 - `CursorArtifactService.listArtifacts` and `downloadArtifact`.
-- Config-first SDK option construction with `loadCursorConfig` and
-  `agentOptionsFromConfig`.
+- Config-first agent creation with `loadCursorConfig` and `agents.scoped`.

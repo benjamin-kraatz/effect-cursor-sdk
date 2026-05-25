@@ -1,7 +1,6 @@
 import {
   CursorAgentService,
   CursorRunService,
-  agentOptionsFromConfig,
   liveLayer,
   loadCursorConfig,
 } from "effect-cursor-sdk";
@@ -15,11 +14,9 @@ const program = Effect.scoped(
     const agents = yield* CursorAgentService;
     const runs = yield* CursorRunService;
 
-    const agent = yield* agents.scoped(
-      agentOptionsFromConfig(config, {
-        local: { cwd: process.cwd() },
-      }),
-    );
+    const agent = yield* agents.scoped(config, {
+      local: { cwd: process.cwd() },
+    });
     const run = yield* agents.send(agent, prompt);
     const text = yield* runs.collectText(run);
 
