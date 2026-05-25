@@ -6,6 +6,8 @@ Effect-native access to the new [Cursor SDK](https://cursor.com/docs/sdk/typescr
 
 `effect-cursor-sdk` wraps `@cursor/sdk` with Effect services, layers, scoped resource management, tagged errors, observability hooks, deterministic mocks, and ready-made runtimes. The upstream SDK remains the source of truth for Cursor-owned types; this package adds Effect ergonomics without creating a parallel model that can drift.
 
+If you want to build with Cursor agents, and you are using Effect, this package is for you.
+
 > [!WARNING]
 > This project is in early development. While all functionality is available, there is still much room for improvement. Contributions are welcome!
 
@@ -38,6 +40,12 @@ Effect-native access to the new [Cursor SDK](https://cursor.com/docs/sdk/typescr
 | `Cursor.me`, models, repositories                                                | `CursorInspectionService`                      |
 | MCP servers, sub-agents, local/cloud options, model options                      | Defaults via `CursorConfig` / `loadCursorConfig`; merged SDK `AgentOptions` ([deprecated](./DEPRECATIONS.md) at agent entry) |
 | Local run event helpers and platform helpers                                     | Re-exported from `@cursor/sdk`                 |
+
+## Use cases
+
+If you are new to the Cursor SDK, take a look at the [Cursor SDK Cookbook](https://github.com/cursor/cookbook). This cookbook provides some (cool!) examples of what you could do with the SDK.
+
+`effect-cursor-sdk` even [uses itself](#automated-changeset-agent) to spin up a Cursor agent to create changesets for pull requests against `main`! 🤯
 
 ## Install
 
@@ -275,7 +283,7 @@ Swap `liveLayer` for `mockLayer({ ... })` in tests and the same program shape ex
 SDK failures are mapped into tagged errors such as `CursorAuthenticationError`, `CursorRateLimitError`, `CursorConfigurationError`, `CursorNetworkError`, and `CursorUnsupportedOperationError`. The original SDK error is preserved as `cause`, with safe operation context and retryability where available.
 
 ```ts
-program.pipe(
+const handled = program.pipe(
   Effect.catchTag("CursorRateLimitError", (error) =>
     Effect.logWarning(`Cursor rate limited request: ${error.message}`),
   ),
@@ -368,7 +376,15 @@ User-facing changes should include a Changeset:
 bun run changeset
 ```
 
-On `main`, GitHub Actions uses Changesets to open a version PR when pending Changesets exist. After that PR is merged, the same workflow runs `bun run release` and publishes to NPM with the `NPM_TOKEN` repository secret.
+### Automated Changeset Agent
+
+This repository also includes a Cursor-powered changeset agent for pull requests against `main`. The workflow in `.github/workflows/changeset-agent.yml` runs `bun run changeset:agent`, starts a scoped local Cursor SDK agent with this package, asks it to inspect the PR diff, and commits a missing `.changeset/*.md` file back to the PR branch when release impact exists.
+
+The job runs only for same-repository, non-draft PRs because it needs both the `CURSOR_API_KEY` repository secret and write access to the PR branch. Forked PRs should add changesets manually or be handled from a trusted maintainer checkout.
+
+Other, optional environment variables are `CURSOR_MODEL` for the Cursor model id and `CHANGESET_BASE_REF` for the diff base. See [Changeset Agent](./docs/changeset-agent.md) for the full architecture, prompt contract, security model, and local usage.
+
+On `main`, GitHub Actions uses Changesets to open a version PR when pending Changesets exist. After that PR is merged, the same workflow runs `bun run release` and publishes to NPM.
 
 For local release preparation, apply pending Changesets and publish only after the package is approved for public release:
 
