@@ -45,4 +45,5 @@ bun run dev -- --mock "Summarize the mock response"
 
 - `CursorAuthenticationError`: check `CURSOR_API_KEY`.
 - `CursorConfigurationError`: check model id, cwd, and prompt shape.
+- `CursorAgentBusyError`: wait for the current run to finish before sending again.
 - `CursorRateLimitError`: wait and retry later.

@@ -1,6 +1,7 @@
 import { Context, Effect, Layer, Stream } from "effect";
 
 import {
+  CursorAgentBusyError,
   CursorAuthenticationError,
   CursorConfigurationError,
   CursorIntegrationNotConnectedError,
@@ -25,6 +26,7 @@ export interface CursorRunServiceShape {
     | CursorRateLimitError
     | CursorIntegrationNotConnectedError
     | CursorConfigurationError
+    | CursorAgentBusyError
     | CursorNetworkError
     | CursorUnknownError
   >;
@@ -36,6 +38,7 @@ export interface CursorRunServiceShape {
     | CursorRateLimitError
     | CursorIntegrationNotConnectedError
     | CursorConfigurationError
+    | CursorAgentBusyError
     | CursorNetworkError
     | CursorUnsupportedOperationError
     | CursorUnknownError
@@ -49,6 +52,7 @@ export interface CursorRunServiceShape {
         | CursorRateLimitError
         | CursorIntegrationNotConnectedError
         | CursorConfigurationError
+        | CursorAgentBusyError
         | CursorNetworkError
         | CursorUnsupportedOperationError
         | CursorUnknownError

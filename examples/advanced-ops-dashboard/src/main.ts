@@ -240,6 +240,8 @@ const remapProgramFailure = (error: unknown): Effect.Effect<never, Error, never>
         return Effect.fail(new Error(`Cursor network error: ${msg}`));
       case "CursorRateLimitError":
         return Effect.fail(new Error(`Cursor rate limit reached: ${msg}`));
+      case "CursorAgentBusyError":
+        return Effect.fail(new Error(`Cursor agent is busy (active run in progress): ${msg}`));
       case "CursorStreamError":
         return Effect.fail(new Error(`Cursor run stream error: ${msg}`));
       case "CursorUnknownError":

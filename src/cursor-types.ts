@@ -55,6 +55,7 @@ export type {
 } from "@cursor/sdk";
 
 export {
+  AgentBusyError,
   AuthenticationError,
   ConfigurationError,
   CursorAgentError,

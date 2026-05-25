@@ -1,6 +1,7 @@
-import { AuthenticationError, UnsupportedRunOperationError } from "@cursor/sdk";
+import { AgentBusyError, AuthenticationError, UnsupportedRunOperationError } from "@cursor/sdk";
 import { expect, it } from "@effect/vitest";
 import {
+  CursorAgentBusyError,
   CursorAuthenticationError,
   CursorStreamError,
   CursorUnknownError,
@@ -64,6 +65,21 @@ it("UnsupportedRunOperationError forwards SDK operation onto mapped error", () =
   expect(err).toMatchObject({
     sdkOperation: "run.cancel",
     message: "nope",
+  });
+});
+
+it("maps AgentBusyError to CursorAgentBusyError", () => {
+  const err = mapCursorError(new AgentBusyError("agent already has an active run"), {
+    operation: "agent.send",
+    agentId: "a1",
+  });
+  expect(err).toBeInstanceOf(CursorAgentBusyError);
+  expect(err).toMatchObject({
+    _tag: "CursorAgentBusyError",
+    message: "agent already has an active run",
+    operation: "agent.send",
+    agentId: "a1",
+    isRetryable: false,
   });
 });
 
