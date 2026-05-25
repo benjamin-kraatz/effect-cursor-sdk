@@ -1,5 +1,6 @@
 import {
   Agent,
+  AgentBusyError,
   AuthenticationError,
   ConfigurationError,
   Cursor,
@@ -14,6 +15,7 @@ import { expect, it } from "@effect/vitest";
 import { ConfigProvider, Effect, Layer, Redacted, Stream } from "effect";
 import { vi } from "vitest";
 import {
+  CursorAgentBusyError,
   CursorAgentService,
   CursorApiKey,
   CursorArtifactService,
@@ -69,6 +71,9 @@ it("maps known SDK errors to tagged errors", () => {
   expect(
     mapCursorError(new ConfigurationError("bad config"), { operation: "agent.create" }),
   ).toBeInstanceOf(CursorConfigurationError);
+  expect(
+    mapCursorError(new AgentBusyError("active run"), { operation: "agent.send" }),
+  ).toBeInstanceOf(CursorAgentBusyError);
   expect(mapCursorError(new NetworkError("offline"), { operation: "agent.create" })).toBeInstanceOf(
     CursorNetworkError,
   );

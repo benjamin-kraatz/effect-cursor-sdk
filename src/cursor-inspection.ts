@@ -1,6 +1,7 @@
 import { Context, Effect, Layer } from "effect";
 
 import {
+  CursorAgentBusyError,
   CursorAuthenticationError,
   CursorConfigurationError,
   CursorIntegrationNotConnectedError,
@@ -37,6 +38,7 @@ export interface CursorInspectionServiceShape {
     | CursorRateLimitError
     | CursorIntegrationNotConnectedError
     | CursorConfigurationError
+    | CursorAgentBusyError
     | CursorNetworkError
     | CursorUnknownError
   >;
@@ -49,6 +51,7 @@ export interface CursorInspectionServiceShape {
     | CursorRateLimitError
     | CursorIntegrationNotConnectedError
     | CursorConfigurationError
+    | CursorAgentBusyError
     | CursorNetworkError
     | CursorUnknownError
   >;
@@ -61,6 +64,7 @@ export interface CursorInspectionServiceShape {
     | CursorRateLimitError
     | CursorIntegrationNotConnectedError
     | CursorConfigurationError
+    | CursorAgentBusyError
     | CursorNetworkError
     | CursorUnknownError
   >;
@@ -73,6 +77,7 @@ export interface CursorInspectionServiceShape {
     | CursorRateLimitError
     | CursorIntegrationNotConnectedError
     | CursorConfigurationError
+    | CursorAgentBusyError
     | CursorNetworkError
     | CursorUnknownError
   >;
@@ -85,6 +90,7 @@ export interface CursorInspectionServiceShape {
     | CursorRateLimitError
     | CursorIntegrationNotConnectedError
     | CursorConfigurationError
+    | CursorAgentBusyError
     | CursorNetworkError
     | CursorUnknownError
   >;
@@ -97,6 +103,7 @@ export interface CursorInspectionServiceShape {
     | CursorRateLimitError
     | CursorIntegrationNotConnectedError
     | CursorConfigurationError
+    | CursorAgentBusyError
     | CursorNetworkError
     | CursorUnknownError
   >;
@@ -109,6 +116,7 @@ export interface CursorInspectionServiceShape {
     | CursorRateLimitError
     | CursorIntegrationNotConnectedError
     | CursorConfigurationError
+    | CursorAgentBusyError
     | CursorNetworkError
     | CursorUnknownError
   >;
@@ -121,6 +129,7 @@ export interface CursorInspectionServiceShape {
     | CursorRateLimitError
     | CursorIntegrationNotConnectedError
     | CursorConfigurationError
+    | CursorAgentBusyError
     | CursorNetworkError
     | CursorUnknownError
   >;
@@ -132,6 +141,7 @@ export interface CursorInspectionServiceShape {
     | CursorRateLimitError
     | CursorIntegrationNotConnectedError
     | CursorConfigurationError
+    | CursorAgentBusyError
     | CursorNetworkError
     | CursorUnknownError
   >;
@@ -143,6 +153,7 @@ export interface CursorInspectionServiceShape {
     | CursorRateLimitError
     | CursorIntegrationNotConnectedError
     | CursorConfigurationError
+    | CursorAgentBusyError
     | CursorNetworkError
     | CursorUnknownError
   >;
@@ -154,6 +165,7 @@ export interface CursorInspectionServiceShape {
     | CursorRateLimitError
     | CursorIntegrationNotConnectedError
     | CursorConfigurationError
+    | CursorAgentBusyError
     | CursorNetworkError
     | CursorUnknownError
   >;

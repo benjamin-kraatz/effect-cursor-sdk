@@ -1,6 +1,7 @@
 import { Context, Effect, Layer } from "effect";
 
 import {
+  CursorAgentBusyError,
   CursorAuthenticationError,
   CursorConfigurationError,
   CursorIntegrationNotConnectedError,
@@ -21,6 +22,7 @@ export interface CursorArtifactServiceShape {
     | CursorRateLimitError
     | CursorIntegrationNotConnectedError
     | CursorConfigurationError
+    | CursorAgentBusyError
     | CursorNetworkError
     | CursorUnknownError
   >;
@@ -33,6 +35,7 @@ export interface CursorArtifactServiceShape {
     | CursorRateLimitError
     | CursorIntegrationNotConnectedError
     | CursorConfigurationError
+    | CursorAgentBusyError
     | CursorNetworkError
     | CursorUnknownError
   >;

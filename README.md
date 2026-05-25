@@ -280,7 +280,7 @@ Swap `liveLayer` for `mockLayer({ ... })` in tests and the same program shape ex
 
 ## Errors
 
-SDK failures are mapped into tagged errors such as `CursorAuthenticationError`, `CursorRateLimitError`, `CursorConfigurationError`, `CursorNetworkError`, and `CursorUnsupportedOperationError`. The original SDK error is preserved as `cause`, with safe operation context and retryability where available.
+SDK failures are mapped into tagged errors such as `CursorAuthenticationError`, `CursorRateLimitError`, `CursorConfigurationError`, `CursorAgentBusyError`, `CursorNetworkError`, and `CursorUnsupportedOperationError`. The original SDK error is preserved as `cause`, with safe operation context and retryability where available.
 
 ```ts
 const handled = program.pipe(

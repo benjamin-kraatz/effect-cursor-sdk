@@ -1,4 +1,5 @@
 import {
+  AgentBusyError,
   AuthenticationError,
   ConfigurationError,
   CursorAgentError,
@@ -91,6 +92,16 @@ export class CursorRateLimitError extends Data.TaggedError(
  */
 export class CursorConfigurationError extends Data.TaggedError(
   "CursorConfigurationError",
+)<CursorErrorFields> {}
+
+/**
+ * The agent already has an active run; starting another run was rejected (409).
+ *
+ * @see {@link mapCursorError}
+ * @category errors
+ */
+export class CursorAgentBusyError extends Data.TaggedError(
+  "CursorAgentBusyError",
 )<CursorErrorFields> {}
 
 /**
@@ -192,6 +203,7 @@ export function mapCursorError(
   | CursorRateLimitError
   | CursorIntegrationNotConnectedError
   | CursorConfigurationError
+  | CursorAgentBusyError
   | CursorNetworkError
   | CursorUnsupportedOperationError
   | CursorUnknownError;
@@ -203,6 +215,7 @@ export function mapCursorError(
   | CursorRateLimitError
   | CursorIntegrationNotConnectedError
   | CursorConfigurationError
+  | CursorAgentBusyError
   | CursorNetworkError
   | CursorUnknownError;
 export function mapCursorError(cause: unknown, context: CursorErrorContext) {
@@ -239,6 +252,9 @@ export function mapCursorError(cause: unknown, context: CursorErrorContext) {
     }),
     Match.when(Match.instanceOf(ConfigurationError), () => {
       return new CursorConfigurationError(fields);
+    }),
+    Match.when(Match.instanceOf(AgentBusyError), () => {
+      return new CursorAgentBusyError(fields);
     }),
     Match.when(Match.instanceOf(NetworkError), () => {
       return new CursorNetworkError(fields);

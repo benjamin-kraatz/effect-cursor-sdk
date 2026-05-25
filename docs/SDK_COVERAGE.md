@@ -48,7 +48,7 @@ Mark each row when verified against the **pinned** SDK version in root [`package
 
 ### Re-exported from `cursor-types`
 
-Helpers and errors such as `AuthenticationError`, local run stream decoders, `createAgentPlatform`, etc. See [`src/cursor-types.ts`](../src/cursor-types.ts). New SDK exports are **not** automatic: add them here deliberately to avoid semver surprises.
+Helpers and errors such as `AuthenticationError`, `AgentBusyError`, local run stream decoders, `createAgentPlatform`, etc. See [`src/cursor-types.ts`](../src/cursor-types.ts). New SDK exports are **not** automatic: add them here deliberately to avoid semver surprises.
 
 ## Optional audit script
 
