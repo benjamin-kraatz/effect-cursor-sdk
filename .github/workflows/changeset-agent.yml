@@ -55,7 +55,8 @@ jobs:
         run: |
           # The agent is constrained to changesets, and the commit step enforces
           # that contract by staging only the .changeset directory.
-          if git diff --quiet -- .changeset; then
+          # git diff ignores untracked files; the agent creates new .changeset/*.md files.
+          if [ -z "$(git status --porcelain .changeset)" ]; then
             echo "No changeset changes to commit."
             exit 0
           fi

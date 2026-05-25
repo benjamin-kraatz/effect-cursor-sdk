@@ -98,7 +98,7 @@ The prompt includes the changed-file list for orientation, but the agent is stil
 
 The script checks for changed `.changeset/*.md` files before starting Cursor. That prevents duplicate release notes on repeated `synchronize` events.
 
-After Cursor finishes, the script lists `.changeset/*.md` files again and logs any newly created file. The workflow then checks `git diff -- .changeset`; if there is no diff, it exits successfully without committing.
+After Cursor finishes, the script lists `.changeset/*.md` files again and logs any newly created file. The workflow then checks `git status --porcelain .changeset` so untracked new files are detected; if the tree is clean under `.changeset`, it exits successfully without committing.
 
 ## Failure Modes
 
