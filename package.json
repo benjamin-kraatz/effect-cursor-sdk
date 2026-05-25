@@ -1,6 +1,6 @@
 {
   "name": "effect-cursor-sdk",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "description": "Effect-based wrapper around the Cursor SDK",
   "keywords": [
     "cursor",
