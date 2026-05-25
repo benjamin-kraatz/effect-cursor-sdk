@@ -13,8 +13,8 @@ import {
 
 describe("create-changeset-agent policy", () => {
   it("keeps the default Cursor model pinned", () => {
-    expect(DEFAULT_CURSOR_MODEL).toBe("composer-2");
-    expect(cursorModelFromEnv({})).toBe("composer-2");
+    expect(DEFAULT_CURSOR_MODEL).toBe("composer-2.5");
+    expect(cursorModelFromEnv({})).toBe("composer-2.5");
   });
 
   it("allows the Cursor model to be overridden by the workflow environment", () => {

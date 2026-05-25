@@ -29,7 +29,7 @@ import {
  * 4. Let CI commit only the expected artifact type.
  */
 export const DEFAULT_CHANGESET_BASE_REF = "origin/main";
-export const DEFAULT_CURSOR_MODEL = "composer-2";
+export const DEFAULT_CURSOR_MODEL = "composer-2.5";
 
 /**
  * `origin/main` is available in CI because the workflow checks out full history.

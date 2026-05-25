@@ -57,7 +57,7 @@ The workflow expects this repository secret:
 
 The script also reads optional environment variables:
 
-- `CURSOR_MODEL`: Cursor model id. The workflow currently sets `composer-2`.
+- `CURSOR_MODEL`: Cursor model id. The workflow currently sets `composer-2.5`.
 - `CHANGESET_BASE_REF`: diff base for release-impact detection. Defaults to `origin/main`.
 - `GITHUB_WORKSPACE`: checkout directory in CI. Local runs default to `process.cwd()`.
 
