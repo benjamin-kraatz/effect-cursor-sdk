@@ -1,5 +1,11 @@
 # effect-cursor-sdk
 
+## 0.3.3
+
+### Patch Changes
+
+- [#21](https://github.com/benjamin-kraatz/effect-cursor-sdk/pull/21) [`7542854`](https://github.com/benjamin-kraatz/effect-cursor-sdk/commit/75428542652136c9f151c464a2656558b5f46682) Thanks [@cursor](https://github.com/apps/cursor)! - Strengthen regression tests for mock runs, `makeMockAssistantSdkMessage` defaults, and `streamStatusChanges` when status listener registration fails.
+
 ## 0.3.2
 
 ### Patch Changes
