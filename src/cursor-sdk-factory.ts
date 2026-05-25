@@ -58,29 +58,19 @@ import type { CursorRunService } from "./cursor-run";
  * @see {@link CursorArtifactService} for artifact APIs on an SDK agent.
  *
  * @remarks
- * **Deprecated for application code:** `create`, `resume`, and `prompt` accept
- * raw {@link AgentOptions} (including a plain `apiKey` string). Prefer
- * {@link CursorAgentService} with `loadCursorConfig` and `createFromConfig` /
- * `resumeFromConfig` / `promptFromConfig` from this package instead.
- * This factory remains the low-level adapter for tests and advanced overrides.
+ * Application code should use {@link CursorAgentService} with
+ * {@link loadCursorConfig} and config-first `create` / `resume` / `prompt` /
+ * `scoped` helpers. This factory remains the low-level adapter for tests and
+ * advanced overrides.
  *
  * @category services
  */
 export interface CursorSdkFactoryShape {
-  /**
-   * @deprecated Prefer {@link CursorAgentService} with config-based helpers.
-   * Low-level adapter to `Agent.create`.
-   */
+  /** Low-level adapter to `Agent.create`. */
   readonly create: (options: AgentOptions) => Promise<SDKAgent>;
-  /**
-   * @deprecated Prefer {@link CursorAgentService} with config-based helpers.
-   * Low-level adapter to `Agent.resume`.
-   */
+  /** Low-level adapter to `Agent.resume`. */
   readonly resume: (agentId: string, options?: Partial<AgentOptions>) => Promise<SDKAgent>;
-  /**
-   * @deprecated Prefer {@link CursorAgentService} with config-based helpers.
-   * Low-level adapter to `Agent.prompt`.
-   */
+  /** Low-level adapter to `Agent.prompt`. */
   readonly prompt: (message: string, options?: AgentOptions) => Promise<RunResult>;
   readonly listAgents: (options?: ListAgentsOptions) => Promise<ListResult<SDKAgentInfo>>;
   readonly listRuns: (agentId: string, options?: ListRunsOptions) => Promise<ListResult<Run>>;

@@ -26,61 +26,23 @@ import type {
  * Agent lifecycle surface backed by the Cursor SDK.
  *
  * @remarks
- * Prefer {@link loadCursorConfig} with {@link CursorAgentServiceShape.createFromConfig},
- * {@link CursorAgentServiceShape.resumeFromConfig},
- * {@link CursorAgentServiceShape.promptFromConfig}, and
- * {@link CursorAgentServiceShape.scopedFromConfig}
+ * Use {@link loadCursorConfig} with {@link CursorAgentServiceShape.create},
+ * {@link CursorAgentServiceShape.resume},
+ * {@link CursorAgentServiceShape.prompt}, and
+ * {@link CursorAgentServiceShape.scoped}
  * so secrets stay in `Redacted` form until {@link agentOptionsFromConfig}
- * merges into SDK {@link AgentOptions}. Plain {@link AgentOptions} entry points
- * are deprecated; see `DEPRECATIONS.md` and the README at the package root.
+ * merges into SDK {@link AgentOptions} at the SDK boundary.
  */
 export interface CursorAgentServiceShape {
   /**
-   * @deprecated Prefer {@link CursorAgentServiceShape.createFromConfig} with {@link loadCursorConfig}
-   * instead of raw {@link AgentOptions} (including a plain `apiKey` string). Next major: `createFromConfig`
-   * is planned to become `create` with the same parameters.
-   */
-  readonly create: (
-    options: AgentOptions,
-  ) => Effect.Effect<
-    SDKAgent,
-    | CursorAuthenticationError
-    | CursorRateLimitError
-    | CursorIntegrationNotConnectedError
-    | CursorConfigurationError
-    | CursorAgentBusyError
-    | CursorNetworkError
-    | CursorUnknownError
-  >;
-  /**
    * Create an agent from {@link CursorConfig} and optional SDK overrides.
-   *
-   * @remarks
-   * Next major: planned rename to `create` with the same signature once plain-`AgentOptions` entry points are removed.
    *
    * @see {@link loadCursorConfig}
    * @see {@link agentOptionsFromConfig}
    */
-  readonly createFromConfig: (
+  readonly create: (
     config: CursorConfig,
     overrides?: AgentOptions,
-  ) => Effect.Effect<
-    SDKAgent,
-    | CursorAuthenticationError
-    | CursorRateLimitError
-    | CursorIntegrationNotConnectedError
-    | CursorConfigurationError
-    | CursorAgentBusyError
-    | CursorNetworkError
-    | CursorUnknownError
-  >;
-  /**
-   * @deprecated Prefer {@link CursorAgentServiceShape.resumeFromConfig} with {@link loadCursorConfig}
-   * instead of raw {@link AgentOptions}. Next major: `resumeFromConfig` is planned to become `resume` with the same parameters.
-   */
-  readonly resume: (
-    agentId: string,
-    options?: Partial<AgentOptions>,
   ) => Effect.Effect<
     SDKAgent,
     | CursorAuthenticationError
@@ -94,13 +56,10 @@ export interface CursorAgentServiceShape {
   /**
    * Resume an agent from {@link CursorConfig} and optional SDK overrides.
    *
-   * @remarks
-   * Next major: planned rename to `resume` with the same signature once plain-`AgentOptions` entry points are removed.
-   *
    * @see {@link loadCursorConfig}
    * @see {@link agentOptionsFromConfig}
    */
-  readonly resumeFromConfig: (
+  readonly resume: (
     agentId: string,
     config: CursorConfig,
     overrides?: AgentOptions,
@@ -115,32 +74,12 @@ export interface CursorAgentServiceShape {
     | CursorUnknownError
   >;
   /**
-   * @deprecated Prefer {@link CursorAgentServiceShape.promptFromConfig} with {@link loadCursorConfig}
-   * instead of raw {@link AgentOptions}. Next major: `promptFromConfig` is planned to become `prompt` with the same parameters.
-   */
-  readonly prompt: (
-    message: string,
-    options?: AgentOptions,
-  ) => Effect.Effect<
-    RunResult,
-    | CursorAuthenticationError
-    | CursorRateLimitError
-    | CursorIntegrationNotConnectedError
-    | CursorConfigurationError
-    | CursorAgentBusyError
-    | CursorNetworkError
-    | CursorUnknownError
-  >;
-  /**
    * One-shot prompt from {@link CursorConfig} and optional SDK overrides.
-   *
-   * @remarks
-   * Next major: planned rename to `prompt` with the same signature once plain-`AgentOptions` entry points are removed.
    *
    * @see {@link loadCursorConfig}
    * @see {@link agentOptionsFromConfig}
    */
-  readonly promptFromConfig: (
+  readonly prompt: (
     message: string,
     config: CursorConfig,
     overrides?: AgentOptions,
@@ -194,32 +133,12 @@ export interface CursorAgentServiceShape {
     | CursorUnknownError
   >;
   /**
-   * @deprecated Prefer {@link CursorAgentServiceShape.scopedFromConfig} with {@link loadCursorConfig}
-   * instead of raw {@link AgentOptions}. Next major: `scopedFromConfig` is planned to become `scoped` with the same parameters.
-   */
-  readonly scoped: (
-    options: AgentOptions,
-  ) => Effect.Effect<
-    SDKAgent,
-    | CursorAuthenticationError
-    | CursorRateLimitError
-    | CursorIntegrationNotConnectedError
-    | CursorConfigurationError
-    | CursorAgentBusyError
-    | CursorNetworkError
-    | CursorUnknownError,
-    Scope.Scope
-  >;
-  /**
    * Acquire an agent in a scope from {@link CursorConfig} and optional SDK overrides.
-   *
-   * @remarks
-   * Next major: planned rename to `scoped` with the same signature once plain-`AgentOptions` entry points are removed.
    *
    * @see {@link loadCursorConfig}
    * @see {@link agentOptionsFromConfig}
    */
-  readonly scopedFromConfig: (
+  readonly scoped: (
     config: CursorConfig,
     overrides?: AgentOptions,
   ) => Effect.Effect<
@@ -250,7 +169,7 @@ export interface CursorAgentServiceShape {
  * const program = Effect.gen(function*() {
  *   const agents = yield* CursorAgentService
  *   const config = yield* loadCursorConfig
- *   const agent = yield* agents.createFromConfig(config, {
+ *   const agent = yield* agents.create(config, {
  *     model: { id: "composer-2" },
  *     local: { cwd: process.cwd() },
  *   })
@@ -262,11 +181,9 @@ export interface CursorAgentServiceShape {
  * @see {@link CursorSdkFactory} for replacing SDK construction in tests.
  *
  * @remarks
- * Prefer {@link CursorAgentServiceShape.createFromConfig} and related methods
- * with {@link loadCursorConfig}; raw {@link AgentOptions} on
- * {@link CursorAgentServiceShape.create} and siblings are deprecated.
- * See `DEPRECATIONS.md` at the package root for migration and planned next-major renames
- * (`createFromConfig` → `create`, etc.).
+ * Load defaults with {@link loadCursorConfig}, then call {@link CursorAgentServiceShape.create},
+ * {@link CursorAgentServiceShape.resume}, {@link CursorAgentServiceShape.prompt}, or
+ * {@link CursorAgentServiceShape.scoped} with optional SDK overrides.
  *
  * @category services
  */
@@ -278,7 +195,7 @@ export class CursorAgentService extends Context.Service<
     Effect.gen(function* () {
       const sdk = yield* CursorSdkFactory;
 
-      const create = (options: AgentOptions) => {
+      const createWithOptions = (options: AgentOptions) => {
         return instrument(
           "agent.create",
           Effect.tryPromise({
@@ -290,7 +207,7 @@ export class CursorAgentService extends Context.Service<
         );
       };
 
-      const resume = (agentId: string, options?: Partial<AgentOptions>) => {
+      const resumeWithOptions = (agentId: string, options?: Partial<AgentOptions>) => {
         return instrument(
           "agent.resume",
           Effect.tryPromise({
@@ -302,7 +219,7 @@ export class CursorAgentService extends Context.Service<
         );
       };
 
-      const prompt = (message: string, options?: AgentOptions) => {
+      const promptWithOptions = (message: string, options?: AgentOptions) => {
         return instrument(
           "agent.prompt",
           Effect.tryPromise({
@@ -357,49 +274,36 @@ export class CursorAgentService extends Context.Service<
         );
       };
 
-      const scoped = (options: AgentOptions) => {
-        return Effect.acquireRelease(create(options), (agent) => {
-          return Effect.ignore(dispose(agent));
-        });
+      const create = (config: CursorConfig, overrides: AgentOptions = {}) => {
+        return createWithOptions(agentOptionsFromConfig(config, overrides));
       };
 
-      const createFromConfig = (config: CursorConfig, overrides: AgentOptions = {}) => {
-        return create(agentOptionsFromConfig(config, overrides));
+      const resume = (agentId: string, config: CursorConfig, overrides: AgentOptions = {}) => {
+        return resumeWithOptions(agentId, agentOptionsFromConfig(config, overrides));
       };
 
-      const resumeFromConfig = (
-        agentId: string,
-        config: CursorConfig,
-        overrides: AgentOptions = {},
-      ) => {
-        return resume(agentId, agentOptionsFromConfig(config, overrides));
+      const prompt = (message: string, config: CursorConfig, overrides: AgentOptions = {}) => {
+        return promptWithOptions(message, agentOptionsFromConfig(config, overrides));
       };
 
-      const promptFromConfig = (
-        message: string,
-        config: CursorConfig,
-        overrides: AgentOptions = {},
-      ) => {
-        return prompt(message, agentOptionsFromConfig(config, overrides));
-      };
-
-      const scopedFromConfig = (config: CursorConfig, overrides: AgentOptions = {}) => {
-        return scoped(agentOptionsFromConfig(config, overrides));
+      const scoped = (config: CursorConfig, overrides: AgentOptions = {}) => {
+        return Effect.acquireRelease(
+          createWithOptions(agentOptionsFromConfig(config, overrides)),
+          (agent) => {
+            return Effect.ignore(dispose(agent));
+          },
+        );
       };
 
       return {
         create,
-        createFromConfig,
         resume,
-        resumeFromConfig,
         prompt,
-        promptFromConfig,
         send,
         reload,
         close,
         dispose,
         scoped,
-        scopedFromConfig,
       } as const;
     }),
   );

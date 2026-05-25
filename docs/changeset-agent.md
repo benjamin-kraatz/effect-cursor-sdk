@@ -61,7 +61,7 @@ The script also reads optional environment variables:
 - `CHANGESET_BASE_REF`: diff base for release-impact detection. Defaults to `origin/main`.
 - `GITHUB_WORKSPACE`: checkout directory in CI. Local runs default to `process.cwd()`.
 
-The script loads Cursor credentials through `loadCursorConfig`, then converts them at the SDK boundary with `agentOptionsFromConfig`. This keeps the example aligned with the package's recommended configuration path.
+The script loads Cursor credentials through `loadCursorConfig`, then creates a scoped agent with `CursorAgentService.scoped(config, overrides)`. This keeps the example aligned with the package's recommended configuration path.
 
 ## Local Usage
 

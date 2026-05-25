@@ -7,8 +7,7 @@ assistant text, and dispose the agent automatically.
 ## What it shows
 
 - `loadCursorConfig`
-- `agentOptionsFromConfig`
-- `CursorAgentService`
+- `CursorAgentService.scoped`
 - `CursorRunService.collectText`
 - `liveLayer`
 - `Effect.scoped` with `agents.scoped`

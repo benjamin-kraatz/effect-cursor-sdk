@@ -3,7 +3,6 @@ import {
   CursorAgentService,
   CursorInspectionService,
   CursorRunService,
-  agentOptionsFromConfig,
   cursorStreamEvents,
   liveRuntime,
   loadCursorConfig,
@@ -153,9 +152,7 @@ const runTriage = (summary: string) =>
     const config = yield* loadCursorConfig;
     const agents = yield* CursorAgentService;
     const runs = yield* CursorRunService;
-    const agent = yield* agents.scoped(
-      agentOptionsFromConfig(config, { local: { cwd: process.cwd() } }),
-    );
+    const agent = yield* agents.scoped(config, { local: { cwd: process.cwd() } });
     const run = yield* agents.send(
       agent,
       [

@@ -4,13 +4,7 @@ import * as NodeServices from "@effect/platform-node/NodeServices";
 import { Effect, Layer } from "effect";
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process";
 
-import {
-  CursorAgentService,
-  CursorRunService,
-  agentOptionsFromConfig,
-  liveLayer,
-  loadCursorConfig,
-} from "../src/index";
+import { CursorAgentService, CursorRunService, liveLayer, loadCursorConfig } from "../src/index";
 
 /**
  * Executable example for running a Cursor SDK agent inside repository automation.
@@ -190,12 +184,10 @@ export function makeProgram(env: NodeJS.ProcessEnv = process.env) {
     const agents = yield* CursorAgentService;
     const runs = yield* CursorRunService;
 
-    const agent = yield* agents.scoped(
-      agentOptionsFromConfig(config, {
-        model: { id: cursorModelFromEnv(env) },
-        local: { cwd },
-      }),
-    );
+    const agent = yield* agents.scoped(config, {
+      model: { id: cursorModelFromEnv(env) },
+      local: { cwd },
+    });
 
     const run = yield* agents.send(agent, promptForChangeset(changedFiles, baseRef));
     const response = yield* runs.collectText(run);

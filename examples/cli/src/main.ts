@@ -2,7 +2,6 @@ import { Effect } from "effect";
 import {
   CursorAgentService,
   CursorRunService,
-  agentOptionsFromConfig,
   liveRuntime,
   loadCursorConfig,
   makeMockRuntime,
@@ -60,12 +59,10 @@ const program = (options: CliOptions) =>
       const agents = yield* CursorAgentService;
       const runs = yield* CursorRunService;
 
-      const agent = yield* agents.scoped(
-        agentOptionsFromConfig(config, {
-          local: { cwd: options.cwd ?? process.cwd() },
-          model: options.model ? { id: options.model } : undefined,
-        }),
-      );
+      const agent = yield* agents.scoped(config, {
+        local: { cwd: options.cwd ?? process.cwd() },
+        model: options.model ? { id: options.model } : undefined,
+      });
       const run = yield* agents.send(agent, options.prompt);
       return yield* runs.collectText(run);
     }),
