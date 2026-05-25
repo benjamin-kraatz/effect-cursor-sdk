@@ -500,6 +500,7 @@ it.effect(
         result: { id: "mock-run", status: "finished" },
         runSupports: { cancel: false },
       });
+      expect(runs.supports(run, "cancel")).toBe(false);
       expect(runs.unsupportedReason(run, "cancel")).toBe("unsupported in mock");
     }).pipe(Effect.provide(CursorRunService.Live)),
 );

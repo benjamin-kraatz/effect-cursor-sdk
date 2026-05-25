@@ -1,9 +1,10 @@
 import { expect, it } from "@effect/vitest";
 import { Effect, Exit, Stream } from "effect";
+import { vi } from "vitest";
 
 import { makeMockRun } from "./cursor-mock";
 import { CursorRunService } from "./cursor-run";
-import type { Run, SDKMessage } from "./cursor-types";
+import type { SDKMessage } from "./cursor-types";
 
 it.effect("collectText joins text across assistant stream events", () =>
   Effect.gen(function* () {
@@ -128,12 +129,18 @@ it.effect("collectText ignores non-assistant stream events while concatenating t
 it.effect("streamStatusChanges fails when status listener registration throws", () =>
   Effect.gen(function* () {
     const runs = yield* CursorRunService;
-    const badRun = {
-      onDidChangeStatus: () => {
-        throw new Error("listener registration failed");
-      },
-    } as unknown as Run;
-    const exit = yield* runs.streamStatusChanges(badRun).pipe(Stream.runDrain, Effect.exit);
-    expect(Exit.isFailure(exit)).toBe(true);
+    const run = makeMockRun({
+      stream: [],
+      result: { id: "mock-run", status: "finished" },
+    });
+    const spy = vi.spyOn(run, "onDidChangeStatus").mockImplementation(() => {
+      throw new Error("subscribe failed");
+    });
+    try {
+      const exit = yield* runs.streamStatusChanges(run).pipe(Stream.runDrain, Effect.exit);
+      expect(Exit.isFailure(exit)).toBe(true);
+    } finally {
+      spy.mockRestore();
+    }
   }).pipe(Effect.provide(CursorRunService.Live)),
 );

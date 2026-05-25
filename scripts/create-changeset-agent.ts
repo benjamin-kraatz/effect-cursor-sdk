@@ -111,8 +111,7 @@ export function changesetFilesFromEntries(
  */
 export function changedChangesetsFromFiles(changedFiles: ReadonlyArray<string>) {
   return changedFiles.filter(
-    (file) =>
-      file.startsWith(".changeset/") && file.endsWith(".md") && !file.endsWith("README.md"),
+    (file) => file.startsWith(".changeset/") && file.endsWith(".md") && !file.endsWith("README.md"),
   );
 }
 
