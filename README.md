@@ -8,9 +8,6 @@ Effect-native access to the new [Cursor SDK](https://cursor.com/docs/sdk/typescr
 
 If you want to build with Cursor agents, and you are using Effect, this package is for you.
 
-> [!WARNING]
-> This project is in early development. While all functionality is available, there is still much room for improvement. Contributions are welcome!
-
 ## Philosophy
 
 - SDK-first: every public `@cursor/sdk` capability should be usable through this package.
@@ -52,6 +49,28 @@ If you are new to the Cursor SDK, take a look at the [Cursor SDK Cookbook](https
 ```bash
 bun add effect-cursor-sdk effect @cursor/sdk
 ```
+
+`effect` is a **peer dependency** (Effect v4). `@cursor/sdk` is bundled with this package, but installing it in your app keeps SDK-owned types and versions explicit when you import from `@cursor/sdk` alongside the wrapper.
+
+### Requirements
+
+- **Runtime:** Bun or Node.js (examples and CI use Bun; Node works for library consumers).
+- **Effect:** `^4.0.0-beta` (see [Effect v4](https://effect.website/docs/introduction/overview) — still pre-release on the Effect side).
+- **Cursor SDK:** `@cursor/sdk` `^1.0.x` (pinned in this repo; see [SDK coverage](./docs/SDK_COVERAGE.md) when upgrading).
+
+### Configuration
+
+`loadCursorConfig` reads optional environment variables through Effect’s `ConfigProvider` (by default, `process.env`):
+
+| Variable | Purpose |
+| --- | --- |
+| `CURSOR_API_KEY` | API key for Cursor (stored as `Redacted` until merged into SDK options). |
+| `CURSOR_MODEL` | Default model id (for example `composer-2`). |
+| `CURSOR_LOCAL_CWD` | Default working directory for local agents. |
+
+All fields are optional at load time; missing `CURSOR_API_KEY` logs a warning and later SDK calls fail with authentication errors unless you pass overrides. Per-call overrides still win when using `createFromConfig` and related helpers.
+
+For offline tests and CI, use [`mockLayer`](#mocks-and-tests) or `makeMockRuntime` — no API key required.
 
 For development in this repo:
 
@@ -164,6 +183,17 @@ const program = Effect.scoped(
 ).pipe(Effect.provide(liveLayer));
 ```
 
+## Resume an existing agent
+
+Use `resumeFromConfig` with the agent id from a prior run or from `CursorInspectionService.listAgents`:
+
+```ts
+const config = yield* loadCursorConfig;
+const agent = yield* agents.resumeFromConfig("bc_abc123", config, {
+  local: { cwd: process.cwd() },
+});
+```
+
 ## Cloud Agents
 
 Cloud options are merged as SDK overrides on top of loaded config:
@@ -205,6 +235,10 @@ yield* runs.streamEvents(run).pipe(
   }),
 );
 ```
+
+## Artifacts
+
+List and download run outputs with `CursorArtifactService` after `send` completes. See the [Artifacts recipe](./docs/RECIPES.md#artifacts) for path resolution and download patterns.
 
 ## Inspection And Metadata
 
