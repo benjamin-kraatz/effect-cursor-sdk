@@ -1,5 +1,11 @@
 # effect-cursor-sdk
 
+## 0.3.4
+
+### Patch Changes
+
+- [#26](https://github.com/benjamin-kraatz/effect-cursor-sdk/pull/26) [`f0e8c83`](https://github.com/benjamin-kraatz/effect-cursor-sdk/commit/f0e8c831cbfd1ffae11603fb5a4d5bbaed30f93a) Thanks [@benjamin-kraatz](https://github.com/benjamin-kraatz)! - Bump `@cursor/sdk` to 1.0.13 and map the SDK's `AgentBusyError` to a new `CursorAgentBusyError` tagged error, re-exported through service interfaces and `cursor-types`.
+
 ## 0.3.3
 
 ### Patch Changes
