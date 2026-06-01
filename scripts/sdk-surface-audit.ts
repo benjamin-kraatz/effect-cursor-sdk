@@ -15,12 +15,12 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { sdkExportSurfaceDiff, sortedSdkExportKeys } from "./sdk-surface-audit-helpers";
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const baselinePath = join(__dirname, "sdk-export-baseline.json");
 
-const currentKeys = Object.keys(Sdk)
-  .filter((key) => key !== "default")
-  .sort();
+const currentKeys = sortedSdkExportKeys(Sdk as Record<string, unknown>);
 
 const writeBaseline = process.argv.includes("--write-baseline");
 
@@ -39,11 +39,7 @@ try {
   process.exit(1);
 }
 
-const baselineSet = new Set(baselineKeys);
-const currentSet = new Set(currentKeys);
-
-const added = currentKeys.filter((key) => !baselineSet.has(key));
-const removed = baselineKeys.filter((key) => !currentSet.has(key));
+const { added, removed } = sdkExportSurfaceDiff(baselineKeys, currentKeys);
 
 if (added.length === 0 && removed.length === 0) {
   console.log(`sdk-surface-audit: OK (${currentKeys.length} exports match baseline).`);
