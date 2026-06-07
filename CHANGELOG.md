@@ -1,5 +1,35 @@
 # effect-cursor-sdk
 
+## 0.4.0
+
+### Minor Changes
+
+- [#30](https://github.com/benjamin-kraatz/effect-cursor-sdk/pull/30) [`e087d98`](https://github.com/benjamin-kraatz/effect-cursor-sdk/commit/e087d98900f0cc45cd0b616031e11d7a6296d8b0) Thanks [@benjamin-kraatz](https://github.com/benjamin-kraatz)! - Remove deprecated plain-`AgentOptions` entry points on `CursorAgentService` and rename the config-first helpers:
+
+  - `createFromConfig` → `create`
+  - `resumeFromConfig` → `resume`
+  - `promptFromConfig` → `prompt`
+  - `scopedFromConfig` → `scoped`
+
+  Application code should load defaults with `loadCursorConfig`, then call the renamed methods with optional SDK overrides.
+
+  **Migration from 0.3.x:**
+
+  ```ts
+  // Before
+  agents.createFromConfig(config, { model: { id: "composer-2" } });
+  agents.create({ apiKey: "...", model: { id: "composer-2" } }); // deprecated
+
+  // After
+  agents.create(config, { model: { id: "composer-2" } });
+  ```
+
+  Removed migration docs (`docs/MIGRATION_NEXT_MAJOR.md`). `DEPRECATIONS.md` now states there are no active deprecations in this version.
+
+### Patch Changes
+
+- [#28](https://github.com/benjamin-kraatz/effect-cursor-sdk/pull/28) [`38d9aee`](https://github.com/benjamin-kraatz/effect-cursor-sdk/commit/38d9aeeb55031ae5008cca33ad9f630224e8107b) Thanks [@benjamin-kraatz](https://github.com/benjamin-kraatz)! - Remove the outdated early-development README warning. Add requirements, configuration, resume, and artifacts sections; align the next-major migration doc version label with 0.3.x.
+
 ## 0.3.4
 
 ### Patch Changes

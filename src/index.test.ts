@@ -284,7 +284,7 @@ it.effect("config-based agent methods merge CursorConfig into SDK factory option
       return yield* CursorAgentService;
     }).pipe(Effect.provide(agentLayer));
 
-    yield* agents.createFromConfig(config, {
+    yield* agents.create(config, {
       model: { id: "composer-2" },
     });
     expect(createOptions).toMatchObject({
@@ -293,7 +293,7 @@ it.effect("config-based agent methods merge CursorConfig into SDK factory option
       local: { cwd: "/repo" },
     });
 
-    yield* agents.resumeFromConfig("agent-1", config, {
+    yield* agents.resume("agent-1", config, {
       model: { id: "resume-override" },
     });
     expect(resumeCall).toEqual({
@@ -305,7 +305,7 @@ it.effect("config-based agent methods merge CursorConfig into SDK factory option
       }),
     });
 
-    yield* agents.promptFromConfig("hello", config, {
+    yield* agents.prompt("hello", config, {
       model: { id: "prompt-model" },
     });
     expect(promptCall).toEqual({
@@ -320,7 +320,7 @@ it.effect("config-based agent methods merge CursorConfig into SDK factory option
     yield* Effect.scoped(
       Effect.gen(function* () {
         createOptions = undefined;
-        yield* agents.scopedFromConfig(config, { model: { id: "scoped-model" } });
+        yield* agents.scoped(config, { model: { id: "scoped-model" } });
       }),
     ).pipe(Effect.provide(agentLayer));
 
@@ -359,10 +359,11 @@ it.effect("uses mock layer for agent, run, artifact, and inspection services", (
     const artifacts = yield* CursorArtifactService;
     const inspection = yield* CursorInspectionService;
 
-    const agent = yield* agents.create({ model: { id: "composer-2" } });
+    const config = new CursorConfig({});
+    const agent = yield* agents.create(config, { model: { id: "composer-2" } });
     const run = yield* agents.send(agent, "Say hello");
-    const resumed = yield* agents.resume("mock-agent");
-    const prompted = yield* agents.prompt("One shot");
+    const resumed = yield* agents.resume("mock-agent", config);
+    const prompted = yield* agents.prompt("One shot", config);
     yield* agents.reload(agent);
     const text = yield* runs.collectText(run);
     const supportsCancel = runs.supports(run, "cancel");
@@ -443,10 +444,11 @@ it.effect("scopes mock agents and disposes them when the scope closes", () =>
       }),
     );
 
+    const config = new CursorConfig({});
     yield* Effect.scoped(
       Effect.gen(function* () {
         const agents = yield* CursorAgentService;
-        const agent = yield* agents.scoped({ model: { id: "composer-2" } });
+        const agent = yield* agents.scoped(config, { model: { id: "composer-2" } });
         expect(scopedAgent).toBe(agent);
         expect(scopedAgent?.closed).toBe(false);
       }),
@@ -513,7 +515,8 @@ it.effect(
 it.effect("makeMockSdkFactoryLayer factoryErrors reject create", () =>
   Effect.gen(function* () {
     const agents = yield* CursorAgentService;
-    const fail = yield* agents.create({ model: { id: "composer-2" } }).pipe(Effect.flip);
+    const config = new CursorConfig({});
+    const fail = yield* agents.create(config, { model: { id: "composer-2" } }).pipe(Effect.flip);
     expect(fail).toMatchObject({ _tag: "CursorUnknownError" });
   }).pipe(
     Effect.provide(
@@ -570,7 +573,8 @@ it.effect("mock agent sendSequence advances per send", () =>
   Effect.gen(function* () {
     const agents = yield* CursorAgentService;
     const runs = yield* CursorRunService;
-    const agent = yield* agents.create({ model: { id: "composer-2" } });
+    const config = new CursorConfig({});
+    const agent = yield* agents.create(config, { model: { id: "composer-2" } });
     const r1 = yield* agents.send(agent, "1");
     const r2 = yield* agents.send(agent, "2");
     const t1 = yield* runs.collectText(r1);
@@ -850,7 +854,8 @@ it.effect("ready-made mock runtime runs programs with mock services", () =>
       Effect.gen(function* () {
         const agents = yield* CursorAgentService;
         const runs = yield* CursorRunService;
-        const agent = yield* agents.create({});
+        const config = new CursorConfig({});
+        const agent = yield* agents.create(config);
         const run = yield* agents.send(agent, "hello");
         return yield* runs.collectText(run);
       }),
@@ -889,9 +894,11 @@ it.effect("maps service failures to operation-specific tagged errors", () =>
       return yield* CursorArtifactService;
     }).pipe(Effect.provide(CursorArtifactService.Live));
 
-    yield* expectFailureTag(agents.create({}), "CursorAuthenticationError");
-    yield* expectFailureTag(agents.resume("agent-1"), "CursorAuthenticationError");
-    yield* expectFailureTag(agents.prompt("hello"), "CursorAuthenticationError");
+    const config = new CursorConfig({});
+
+    yield* expectFailureTag(agents.create(config), "CursorAuthenticationError");
+    yield* expectFailureTag(agents.resume("agent-1", config), "CursorAuthenticationError");
+    yield* expectFailureTag(agents.prompt("hello", config), "CursorAuthenticationError");
     yield* expectFailureTag(agents.send(agent, "hello"), "CursorAuthenticationError");
     yield* expectFailureTag(agents.reload(agent), "CursorAuthenticationError");
     yield* expectFailureTag(agents.dispose(agent), "CursorAuthenticationError");

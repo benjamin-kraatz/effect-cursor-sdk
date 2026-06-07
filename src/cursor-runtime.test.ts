@@ -3,6 +3,7 @@ import { expect, it } from "@effect/vitest";
 import { Effect, ManagedRuntime } from "effect";
 import { vi } from "vitest";
 import { CursorAgentService } from "./cursor-agent";
+import { CursorConfig } from "./cursor-config";
 import { makeMockAgent } from "./cursor-mock";
 import { CursorRunService } from "./cursor-run";
 import { CursorSdkFactory } from "./cursor-sdk-factory";
@@ -33,7 +34,7 @@ it.effect("mockLayer wires mock agent and run services without custom fixtures",
   Effect.gen(function* () {
     const agents = yield* CursorAgentService;
     const runs = yield* CursorRunService;
-    const agent = yield* agents.create({});
+    const agent = yield* agents.create(new CursorConfig({}));
     const run = yield* agents.send(agent, "ping");
     const text = yield* runs.collectText(run);
     expect(text).toBe("");

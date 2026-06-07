@@ -8,7 +8,7 @@ config overrides, and tagged error handling.
 
 - `liveRuntime.runPromise` for small scripts.
 - `makeMockRuntime` for offline demos and docs.
-- `loadCursorConfig` and `agentOptionsFromConfig`.
+- `loadCursorConfig` and config-first `agents.scoped`.
 - `CursorAgentService.prompt`.
 - `Effect.catchTag` for common Cursor failures.
 

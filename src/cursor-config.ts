@@ -38,11 +38,10 @@ export type CursorLocalCwd = typeof CursorLocalCwd.Type;
  * {@link AgentOptions} at the SDK boundary.
  *
  * @remarks
- * **Preferred path:** Load defaults with {@link loadCursorConfig}, then call
- * `CursorAgentService` methods such as `createFromConfig` (and related helpers)
- * or merge manually with {@link agentOptionsFromConfig}. Passing plain
- * {@link AgentOptions} directly to deprecated `create` / `resume` / `prompt` /
- * `scoped` overloads may be removed in a future major version.
+ * Load defaults with {@link loadCursorConfig}, then call
+ * `CursorAgentService` methods such as `create`, `resume`, `prompt`, and
+ * `scoped`, or merge manually with {@link agentOptionsFromConfig} for advanced
+ * SDK-factory wiring.
  *
  * @example
  * ```ts
@@ -92,7 +91,7 @@ export const cursorConfig = Config.all({
  * Build SDK `AgentOptions` from wrapper config and optional overrides.
  *
  * This is the adapter from typed, redacted {@link CursorConfig} to the SDK's
- * plain-string `apiKey` boundary. Prefer `CursorAgentService.createFromConfig`
+ * plain-string `apiKey` boundary. Prefer `CursorAgentService.create`
  * (and related methods) over building {@link AgentOptions} by hand.
  *
  * @param config - Wrapper-owned environment defaults.
@@ -114,7 +113,7 @@ export const cursorConfig = Config.all({
  * @remarks
  * Explicit override values always win over environment-derived defaults.
  * For application code, prefer service methods that take {@link CursorConfig}
- * instead of calling this helper and then the deprecated `create` overload.
+ * instead of calling this helper directly.
  *
  * @category config
  */
@@ -148,7 +147,7 @@ export const agentOptionsFromConfig = (
  * from {@link cursorConfig}.
  * Omitting `CURSOR_API_KEY` only means no default API-key-based auth will be
  * set; callers can still provide credentials via {@link agentOptionsFromConfig}
- * overrides or the `*FromConfig` service helpers.
+ * overrides or the config-first service helpers on {@link CursorAgentService}.
  *
  * If the API key is not set, it will log a warning message.
  *
@@ -159,7 +158,7 @@ export const agentOptionsFromConfig = (
  * ```ts
  * const config = yield* loadCursorConfig
  * const options = agentOptionsFromConfig(config, { local: { cwd: process.cwd() } })
- * // Or use CursorAgentService.createFromConfig(config, { local: { cwd: process.cwd() } })
+ * // Or use CursorAgentService.create(config, { local: { cwd: process.cwd() } })
  * ```
  *
  * To change the way that the environment variables are loaded,
@@ -187,7 +186,7 @@ export const agentOptionsFromConfig = (
  * @remarks
  * This effect is the preferred entry for redacted environment defaults.
  * Pair it with {@link agentOptionsFromConfig} or `CursorAgentService` helpers
- * such as `createFromConfig`.
+ * such as `create`, `resume`, `prompt`, and `scoped`.
  *
  * @category config
  */
