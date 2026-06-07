@@ -1,5 +1,11 @@
 # effect-cursor-sdk
 
+## 0.4.1
+
+### Patch Changes
+
+- [#32](https://github.com/benjamin-kraatz/effect-cursor-sdk/pull/32) [`b18a275`](https://github.com/benjamin-kraatz/effect-cursor-sdk/commit/b18a2755cfb96c63112283c51ef8d5d79a757714) Thanks [@benjamin-kraatz](https://github.com/benjamin-kraatz)! - Bump `@cursor/sdk` to 1.0.18.
+
 ## 0.4.0
 
 ### Minor Changes
