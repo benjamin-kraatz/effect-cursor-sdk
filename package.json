@@ -64,7 +64,7 @@
     "verify:publish": "bun run typecheck && bun run sdk-audit && bun run lint && bun run test && bun run build && bun run lint:package"
   },
   "dependencies": {
-    "@cursor/sdk": "^1.0.13",
+    "@cursor/sdk": "^1.0.18",
     "effect-cursor-sdk": "."
   },
   "devDependencies": {
