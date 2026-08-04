@@ -5,10 +5,12 @@ import type {
   AgentMessage,
   AgentOperationOptions,
   AgentOptions,
+  AgentUsage,
   CursorRequestOptions,
   GetAgentMessagesOptions,
   GetAgentOptions,
   GetRunOptions,
+  GetUsageOptions,
   ListAgentsOptions,
   ListResult,
   ListRunsOptions,
@@ -25,6 +27,7 @@ import type {
   SDKUser,
   SDKUserMessage,
   SendOptions,
+  TokenUsage,
 } from "./cursor-types";
 
 /**
@@ -50,6 +53,7 @@ export type CursorMockFactoryMethod =
   | "listRuns"
   | "getRun"
   | "getAgent"
+  | "getUsage"
   | "archiveAgent"
   | "unarchiveAgent"
   | "deleteAgent"
@@ -70,6 +74,8 @@ export interface CursorMockFixtures {
   readonly models?: ReadonlyArray<SDKModel>;
   readonly repositories?: ReadonlyArray<SDKRepository>;
   readonly user?: SDKUser;
+  /** Returned by {@link MockCursorAgent.getUsage} and factory `getUsage`. */
+  readonly usage?: AgentUsage;
   /**
    * Per-`send` merged fixtures. Each `MockCursorAgent.send` increments the index;
    * when exhausted, further sends reuse the last entry merged with the base fixtures.
@@ -135,8 +141,17 @@ export class MockCursorRun implements Run {
   get durationMs(): number | undefined {
     return this.waitResult.durationMs;
   }
+  get usage(): TokenUsage | undefined {
+    return this.waitResult.usage;
+  }
   get git(): RunResult["git"] {
     return this.waitResult.git;
+  }
+  get error(): RunResult["error"] {
+    return this.waitResult.error;
+  }
+  get requestId(): string | undefined {
+    return this.waitResult.requestId;
   }
   supports(operation: RunOperation): boolean {
     const override = this.behavior?.supports?.[operation];
@@ -220,7 +235,28 @@ export class MockCursorAgent implements SDKAgent {
   async downloadArtifact(_path: string): Promise<Buffer> {
     return this.fixtures.artifactData ?? Buffer.from("");
   }
+  async getUsage(options?: GetUsageOptions): Promise<AgentUsage> {
+    const usage = this.fixtures.usage ?? emptyAgentUsage(this.fixtures.runId ?? "mock-run");
+    if (options?.runId === undefined) return usage;
+    return {
+      ...usage,
+      runs: usage.runs.filter((run) => run.runId === options.runId),
+    };
+  }
 }
+
+const emptyTokenUsage = (): TokenUsage => ({
+  inputTokens: 0,
+  outputTokens: 0,
+  cacheReadTokens: 0,
+  cacheWriteTokens: 0,
+  totalTokens: 0,
+});
+
+const emptyAgentUsage = (runId: string): AgentUsage => ({
+  usage: emptyTokenUsage(),
+  runs: [{ runId, usage: emptyTokenUsage() }],
+});
 
 /**
  * Create a mock run from fixtures.
@@ -347,6 +383,19 @@ export const makeMockSdkFactoryLayer = (fixtures: CursorMockFixtures = {}) => {
             lastModified: 0,
           }
         );
+      },
+      getUsage: async (
+        _agentId: string,
+        options?: GetUsageOptions & CursorRequestOptions,
+      ): Promise<AgentUsage> => {
+        const early = rejectFactory(fixtures, "getUsage");
+        if (early) return early;
+        const usage = fixtures.usage ?? emptyAgentUsage(fixtures.runId ?? "mock-run");
+        if (options?.runId === undefined) return usage;
+        return {
+          ...usage,
+          runs: usage.runs.filter((run) => run.runId === options.runId),
+        };
       },
       archiveAgent: async (_agentId: string, _options?: AgentOperationOptions): Promise<void> => {
         const early = rejectFactory(fixtures, "archiveAgent");

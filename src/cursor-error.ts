@@ -25,6 +25,7 @@ export type CursorOperation =
   | "agent.send"
   | "agent.close"
   | "agent.reload"
+  | "agent.getUsage"
   | "agent.dispose"
   | "agent.list"
   | "agent.get"

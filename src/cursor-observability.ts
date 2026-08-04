@@ -48,7 +48,7 @@ import type { AgentOptions, Run, SDKMessage } from "./cursor-types";
  * @category observability
  */
 export const cursorCatalogRetrySchedule = Schedule.exponential("150 millis").pipe(
-  Schedule.both(Schedule.recurs(3)),
+  Schedule.upTo({ times: 3 }),
 );
 
 /**
