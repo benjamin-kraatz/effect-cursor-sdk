@@ -1,5 +1,11 @@
 # effect-cursor-sdk
 
+## 0.5.0
+
+### Minor Changes
+
+- [#34](https://github.com/benjamin-kraatz/effect-cursor-sdk/pull/34) [`f495528`](https://github.com/benjamin-kraatz/effect-cursor-sdk/commit/f4955282c8f9b0952c535cbc0e6ea90fe6a4db90) Thanks [@benjamin-kraatz](https://github.com/benjamin-kraatz)! - Bump `@cursor/sdk` to 1.0.26 and Effect to 4.0.0-beta.103. Expose `getUsage` on `CursorAgentService` / `CursorInspectionService` (and mocks), and re-export the related usage types.
+
 ## 0.4.1
 
 ### Patch Changes
