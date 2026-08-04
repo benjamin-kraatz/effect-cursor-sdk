@@ -5,10 +5,12 @@ import type {
   AgentMessage,
   AgentOperationOptions,
   AgentOptions,
+  AgentUsage,
   CursorRequestOptions,
   GetAgentMessagesOptions,
   GetAgentOptions,
   GetRunOptions,
+  GetUsageOptions,
   ListAgentsOptions,
   ListResult,
   ListRunsOptions,
@@ -76,6 +78,10 @@ export interface CursorSdkFactoryShape {
   readonly listRuns: (agentId: string, options?: ListRunsOptions) => Promise<ListResult<Run>>;
   readonly getRun: (runId: string, options?: GetRunOptions) => Promise<Run>;
   readonly getAgent: (agentId: string, options?: GetAgentOptions) => Promise<SDKAgentInfo>;
+  readonly getUsage: (
+    agentId: string,
+    options?: GetUsageOptions & CursorRequestOptions,
+  ) => Promise<AgentUsage>;
   readonly archiveAgent: (agentId: string, options?: AgentOperationOptions) => Promise<void>;
   readonly unarchiveAgent: (agentId: string, options?: AgentOperationOptions) => Promise<void>;
   readonly deleteAgent: (agentId: string, options?: AgentOperationOptions) => Promise<void>;
@@ -135,6 +141,12 @@ export class CursorSdkFactory extends Context.Service<CursorSdkFactory, CursorSd
       },
       getAgent: (agentId: string, options?: GetAgentOptions): Promise<SDKAgentInfo> => {
         return Agent.get(agentId, options);
+      },
+      getUsage: (
+        agentId: string,
+        options?: GetUsageOptions & CursorRequestOptions,
+      ): Promise<AgentUsage> => {
+        return Agent.getUsage(agentId, options);
       },
       archiveAgent: (agentId: string, options?: AgentOperationOptions): Promise<void> => {
         return Agent.archive(agentId, options);

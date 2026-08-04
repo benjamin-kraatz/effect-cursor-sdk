@@ -15,10 +15,12 @@ import { instrument } from "./cursor-telemetry";
 import type {
   AgentMessage,
   AgentOperationOptions,
+  AgentUsage,
   CursorRequestOptions,
   GetAgentMessagesOptions,
   GetAgentOptions,
   GetRunOptions,
+  GetUsageOptions,
   ListAgentsOptions,
   ListResult,
   ListRunsOptions,
@@ -47,6 +49,24 @@ export interface CursorInspectionServiceShape {
     options?: GetAgentOptions,
   ) => Effect.Effect<
     SDKAgentInfo,
+    | CursorAuthenticationError
+    | CursorRateLimitError
+    | CursorIntegrationNotConnectedError
+    | CursorConfigurationError
+    | CursorAgentBusyError
+    | CursorNetworkError
+    | CursorUnknownError
+  >;
+  /**
+   * Fetch billed token usage and dollar cost for an agent's runs by ID.
+   *
+   * Cloud agents only for now — local agent IDs fail with {@link CursorConfigurationError}.
+   */
+  readonly getUsage: (
+    agentId: string,
+    options?: GetUsageOptions & CursorRequestOptions,
+  ) => Effect.Effect<
+    AgentUsage,
     | CursorAuthenticationError
     | CursorRateLimitError
     | CursorIntegrationNotConnectedError
@@ -212,6 +232,17 @@ export class CursorInspectionService extends Context.Service<
               try: () => sdk.getAgent(agentId, options),
               catch: (cause) => {
                 return mapCursorError(cause, { operation: "agent.get", agentId });
+              },
+            }),
+          );
+        },
+        getUsage: (agentId: string, options?: GetUsageOptions & CursorRequestOptions) => {
+          return instrument(
+            "agent.getUsage",
+            Effect.tryPromise({
+              try: () => sdk.getUsage(agentId, options),
+              catch: (cause) => {
+                return mapCursorError(cause, { operation: "agent.getUsage", agentId });
               },
             }),
           );

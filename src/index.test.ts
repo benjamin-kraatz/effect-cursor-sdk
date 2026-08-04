@@ -268,6 +268,16 @@ it.effect("config-based agent methods merge CursorConfig into SDK factory option
           summary: "x",
           lastModified: 0,
         }),
+        getUsage: async () => ({
+          usage: {
+            inputTokens: 0,
+            outputTokens: 0,
+            cacheReadTokens: 0,
+            cacheWriteTokens: 0,
+            totalTokens: 0,
+          },
+          runs: [],
+        }),
         archiveAgent: async () => undefined,
         unarchiveAgent: async () => undefined,
         deleteAgent: async () => undefined,
@@ -379,8 +389,10 @@ it.effect("uses mock layer for agent, run, artifact, and inspection services", (
     const unsubscribe = yield* runs.onDidChangeStatus(run, () => undefined);
     const listedArtifacts = yield* artifacts.listArtifacts(agent);
     const downloaded = yield* artifacts.downloadArtifact(agent, "artifacts/output.txt");
+    const agentUsage = yield* agents.getUsage(agent);
     const listedAgents = yield* inspection.listAgents();
     const gotAgent = yield* inspection.getAgent("mock-agent");
+    const inspectedUsage = yield* inspection.getUsage("mock-agent");
     yield* inspection.archiveAgent("mock-agent");
     yield* inspection.unarchiveAgent("mock-agent");
     yield* inspection.deleteAgent("mock-agent");
@@ -405,6 +417,8 @@ it.effect("uses mock layer for agent, run, artifact, and inspection services", (
       { path: "artifacts/output.txt", sizeBytes: 2, updatedAt: "now" },
     ]);
     expect(downloaded.toString()).toBe("ok");
+    expect(agentUsage.usage.totalTokens).toBe(42);
+    expect(inspectedUsage.usage.totalTokens).toBe(42);
     expect(gotAgent.agentId).toBe("mock-agent");
     expect(listedRuns.items[0]?.id).toBe("mock-run");
     expect(gotRun.id).toBe("mock-run");
@@ -425,6 +439,27 @@ it.effect("uses mock layer for agent, run, artifact, and inspection services", (
         user: { apiKeyName: "mock-key", userEmail: "mock@example.com", createdAt: "now" },
         models: [{ id: "composer-2", displayName: "Composer 2" }],
         repositories: [{ url: "https://github.com/example/repo" }],
+        usage: {
+          usage: {
+            inputTokens: 10,
+            outputTokens: 32,
+            cacheReadTokens: 0,
+            cacheWriteTokens: 0,
+            totalTokens: 42,
+          },
+          runs: [
+            {
+              runId: "mock-run",
+              usage: {
+                inputTokens: 10,
+                outputTokens: 32,
+                cacheReadTokens: 0,
+                cacheWriteTokens: 0,
+                totalTokens: 42,
+              },
+            },
+          ],
+        },
       }),
     ),
   ),
@@ -536,6 +571,7 @@ it.effect("makeMockSdkFactoryLayer factoryErrors reject static SDK factory metho
       await expect(sdk.listRuns("a")).rejects.toBe(boom);
       await expect(sdk.getRun("r")).rejects.toBe(boom);
       await expect(sdk.getAgent("a")).rejects.toBe(boom);
+      await expect(sdk.getUsage("a")).rejects.toBe(boom);
       await expect(sdk.resume("a")).rejects.toBe(boom);
       await expect(sdk.prompt("x")).rejects.toBe(boom);
       await expect(sdk.listMessages("a")).rejects.toBe(boom);
@@ -554,6 +590,7 @@ it.effect("makeMockSdkFactoryLayer factoryErrors reject static SDK factory metho
           listRuns: boom,
           getRun: boom,
           getAgent: boom,
+          getUsage: boom,
           resume: boom,
           prompt: boom,
           listMessages: boom,
@@ -803,6 +840,17 @@ it.effect("live SDK factory delegates to the underlying Cursor SDK", () =>
     using listRuns = vi.spyOn(Agent, "listRuns").mockResolvedValue({ items: [run] });
     using getRun = vi.spyOn(Agent, "getRun").mockResolvedValue(run);
     using get = vi.spyOn(Agent, "get").mockResolvedValue(agentInfo);
+    const usage = {
+      usage: {
+        inputTokens: 1,
+        outputTokens: 2,
+        cacheReadTokens: 0,
+        cacheWriteTokens: 0,
+        totalTokens: 3,
+      },
+      runs: [],
+    };
+    using getUsage = vi.spyOn(Agent, "getUsage").mockResolvedValue(usage);
     using archive = vi.spyOn(Agent, "archive").mockResolvedValue(undefined);
     using unarchive = vi.spyOn(Agent, "unarchive").mockResolvedValue(undefined);
     using deleteAgent = vi.spyOn(Agent, "delete").mockResolvedValue(undefined);
@@ -819,6 +867,7 @@ it.effect("live SDK factory delegates to the underlying Cursor SDK", () =>
     expect(yield* Effect.promise(() => sdk.listRuns("live-agent"))).toEqual({ items: [run] });
     expect(yield* Effect.promise(() => sdk.getRun("live-run"))).toBe(run);
     expect(yield* Effect.promise(() => sdk.getAgent("live-agent"))).toBe(agentInfo);
+    expect(yield* Effect.promise(() => sdk.getUsage("live-agent"))).toBe(usage);
     yield* Effect.promise(() => sdk.archiveAgent("live-agent"));
     yield* Effect.promise(() => sdk.unarchiveAgent("live-agent"));
     yield* Effect.promise(() => sdk.deleteAgent("live-agent"));
@@ -834,6 +883,7 @@ it.effect("live SDK factory delegates to the underlying Cursor SDK", () =>
     expect(listRuns).toHaveBeenCalledWith("live-agent", undefined);
     expect(getRun).toHaveBeenCalledWith("live-run", undefined);
     expect(get).toHaveBeenCalledWith("live-agent", undefined);
+    expect(getUsage).toHaveBeenCalledWith("live-agent", undefined);
     expect(archive).toHaveBeenCalledWith("live-agent", undefined);
     expect(unarchive).toHaveBeenCalledWith("live-agent", undefined);
     expect(deleteAgent).toHaveBeenCalledWith("live-agent", undefined);
@@ -881,18 +931,10 @@ it.effect("maps service failures to operation-specific tagged errors", () =>
       Layer.provide(failingSdkFactoryLayer(authFailure)),
     );
 
-    const agents = yield* Effect.gen(function* () {
-      return yield* CursorAgentService;
-    }).pipe(Effect.provide(agentLayer));
-    const inspection = yield* Effect.gen(function* () {
-      return yield* CursorInspectionService;
-    }).pipe(Effect.provide(inspectionLayer));
-    const runs = yield* Effect.gen(function* () {
-      return yield* CursorRunService;
-    }).pipe(Effect.provide(CursorRunService.Live));
-    const artifacts = yield* Effect.gen(function* () {
-      return yield* CursorArtifactService;
-    }).pipe(Effect.provide(CursorArtifactService.Live));
+    const agents = yield* CursorAgentService.pipe(Effect.provide(agentLayer));
+    const inspection = yield* CursorInspectionService.pipe(Effect.provide(inspectionLayer));
+    const runs = yield* CursorRunService.pipe(Effect.provide(CursorRunService.Live));
+    const artifacts = yield* CursorArtifactService.pipe(Effect.provide(CursorArtifactService.Live));
 
     const config = new CursorConfig({});
 
@@ -912,8 +954,10 @@ it.effect("maps service failures to operation-specific tagged errors", () =>
       artifacts.downloadArtifact(agent, "artifact.txt"),
       "CursorAuthenticationError",
     );
+    yield* expectFailureTag(agents.getUsage(agent), "CursorAuthenticationError");
     yield* expectFailureTag(inspection.listAgents(), "CursorAuthenticationError");
     yield* expectFailureTag(inspection.getAgent("agent-1"), "CursorAuthenticationError");
+    yield* expectFailureTag(inspection.getUsage("agent-1"), "CursorAuthenticationError");
     yield* expectFailureTag(inspection.archiveAgent("agent-1"), "CursorAuthenticationError");
     yield* expectFailureTag(inspection.unarchiveAgent("agent-1"), "CursorAuthenticationError");
     yield* expectFailureTag(inspection.deleteAgent("agent-1"), "CursorAuthenticationError");
@@ -947,6 +991,9 @@ const failingSdkFactory = (cause: Error): CursorSdkFactoryShape => {
       throw cause;
     },
     getAgent: async () => {
+      throw cause;
+    },
+    getUsage: async () => {
       throw cause;
     },
     archiveAgent: async () => {
@@ -999,6 +1046,9 @@ const makeThrowingAgent = (cause: Error): SDKAgent => {
       throw cause;
     },
     downloadArtifact: async () => {
+      throw cause;
+    },
+    getUsage: async () => {
       throw cause;
     },
   };

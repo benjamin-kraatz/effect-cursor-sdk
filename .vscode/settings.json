@@ -4,5 +4,6 @@
   "oxc.fmt.configPath": ".oxfmtrc.json",
   "[markdown]": {
     "editor.defaultFormatter": "DavidAnson.vscode-markdownlint"
-  }
+  },
+  "js/ts.tsdk.path": "./node_modules/typescript/lib"
 }

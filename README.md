@@ -28,10 +28,10 @@ If you want to build with Cursor agents, and you are using Effect, this package 
 | SDK capability                                                                   | Effect wrapper                                 |
 | -------------------------------------------------------------------------------- | ---------------------------------------------- |
 | `Agent.create`, `Agent.resume`, `Agent.prompt`                                   | `CursorAgentService`                           |
-| `agent.send`, `reload`, `close`, async dispose                                   | `CursorAgentService`                           |
+| `agent.send`, `reload`, `getUsage`, `close`, async dispose                       | `CursorAgentService`                           |
 | `run.wait`, `stream`, `conversation`, `cancel`, status listeners / streams, support checks | `CursorRunService`                             |
 | `agent.listArtifacts`, `downloadArtifact`                                        | `CursorArtifactService`                        |
-| `Agent.list`, `get`, `listRuns`, `getRun`, messages                              | `CursorInspectionService`                      |
+| `Agent.list`, `get`, `getUsage`, `listRuns`, `getRun`, messages                  | `CursorInspectionService`                      |
 | `Agent.archive`, `unarchive`, `delete`                                           | `CursorInspectionService`                      |
 | `Cursor.me`, models, repositories                                                | `CursorInspectionService`                      |
 | MCP servers, sub-agents, local/cloud options, model options                      | Defaults via `CursorConfig` / `loadCursorConfig`; merged into SDK `AgentOptions` at the boundary |
@@ -253,7 +253,7 @@ const agentGardenSnapshot = Effect.gen(function* () {
     { concurrency: "unbounded" },
   ).pipe(
     Effect.retry(
-      Schedule.exponential("150 millis").pipe(Schedule.both(Schedule.recurs(3))),
+      Schedule.exponential("150 millis").pipe(Schedule.upTo({ times: 3 })),
     ),
     Effect.timeout("45 seconds"),
   );

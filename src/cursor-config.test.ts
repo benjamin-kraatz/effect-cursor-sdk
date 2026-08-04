@@ -31,7 +31,29 @@ it("agentOptionsFromConfig does not replace explicit apiKey with config when ove
   expect(options.apiKey).toBe("");
 });
 
-it.effect("loadCursorConfig preserves empty string model and cwd from provider", () =>
+it.effect("loadCursorConfig treats empty string model and cwd as missing by default", () =>
+  Effect.gen(function* () {
+    const config = yield* loadCursorConfig;
+    expect(config).toEqual(
+      new CursorConfig({
+        apiKey: CursorApiKey.make(Redacted.make("k")),
+        modelId: undefined,
+        cwd: undefined,
+      }),
+    );
+  }).pipe(
+    Effect.provideService(
+      ConfigProvider.ConfigProvider,
+      ConfigProvider.fromUnknown({
+        CURSOR_API_KEY: "k",
+        CURSOR_MODEL: "",
+        CURSOR_LOCAL_CWD: "",
+      }),
+    ),
+  ),
+);
+
+it.effect("loadCursorConfig can preserve empty string model and cwd when opted in", () =>
   Effect.gen(function* () {
     const config = yield* loadCursorConfig;
     expect(config).toEqual(
@@ -44,11 +66,14 @@ it.effect("loadCursorConfig preserves empty string model and cwd from provider",
   }).pipe(
     Effect.provideService(
       ConfigProvider.ConfigProvider,
-      ConfigProvider.fromUnknown({
-        CURSOR_API_KEY: "k",
-        CURSOR_MODEL: "",
-        CURSOR_LOCAL_CWD: "",
-      }),
+      ConfigProvider.fromUnknown(
+        {
+          CURSOR_API_KEY: "k",
+          CURSOR_MODEL: "",
+          CURSOR_LOCAL_CWD: "",
+        },
+        { preserveEmptyStrings: true },
+      ),
     ),
   ),
 );

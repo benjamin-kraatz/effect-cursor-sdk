@@ -15,6 +15,8 @@ import { CursorSdkFactory } from "./cursor-sdk-factory";
 import { instrument } from "./cursor-telemetry";
 import type {
   AgentOptions,
+  AgentUsage,
+  GetUsageOptions,
   Run,
   RunResult,
   SDKAgent,
@@ -111,6 +113,24 @@ export interface CursorAgentServiceShape {
     agent: SDKAgent,
   ) => Effect.Effect<
     void,
+    | CursorAuthenticationError
+    | CursorRateLimitError
+    | CursorIntegrationNotConnectedError
+    | CursorConfigurationError
+    | CursorAgentBusyError
+    | CursorNetworkError
+    | CursorUnknownError
+  >;
+  /**
+   * Fetch billed token usage and dollar cost for an agent's runs.
+   *
+   * Cloud agents only for now — local agents fail with {@link CursorConfigurationError}.
+   */
+  readonly getUsage: (
+    agent: SDKAgent,
+    options?: GetUsageOptions,
+  ) => Effect.Effect<
+    AgentUsage,
     | CursorAuthenticationError
     | CursorRateLimitError
     | CursorIntegrationNotConnectedError
@@ -255,6 +275,21 @@ export class CursorAgentService extends Context.Service<
         );
       };
 
+      const getUsage = (agent: SDKAgent, options?: GetUsageOptions) => {
+        return instrument(
+          "agent.getUsage",
+          Effect.tryPromise({
+            try: () => agent.getUsage(options),
+            catch: (cause) => {
+              return mapCursorError(cause, {
+                operation: "agent.getUsage",
+                agentId: agent.agentId,
+              });
+            },
+          }),
+        );
+      };
+
       const close = (agent: SDKAgent): Effect.Effect<void> => {
         return instrument(
           "agent.close",
@@ -301,6 +336,7 @@ export class CursorAgentService extends Context.Service<
         prompt,
         send,
         reload,
+        getUsage,
         close,
         dispose,
         scoped,

@@ -30,10 +30,12 @@ Mark each row when verified against the **pinned** SDK version in root [`package
 | `Agent.messages.list`                             | `CursorInspectionService.listMessages`, `CursorSdkFactory.listMessages`     | OK     |
 | `SDKAgent.send`                                   | `CursorAgentService.send`                                                   | OK     |
 | `SDKAgent.reload`                                 | `CursorAgentService.reload`                                                 | OK     |
+| `SDKAgent.getUsage`                               | `CursorAgentService.getUsage`                                               | OK     |
 | `SDKAgent.close`                                  | `CursorAgentService.close`                                                  | OK     |
 | async dispose                                     | `CursorAgentService.dispose`                                                | OK     |
 | `SDKAgent.listArtifacts`                          | `CursorArtifactService.listArtifacts`                                       | OK     |
 | `SDKAgent.downloadArtifact`                       | `CursorArtifactService.downloadArtifact`                                    | OK     |
+| `Agent.getUsage`                                  | `CursorInspectionService.getUsage`, `CursorSdkFactory.getUsage`             | OK     |
 | `Run.wait` / `cancel` / `conversation` / `stream` | `CursorRunService`                                                          | OK     |
 | `Run.supports` / `unsupportedReason`              | `CursorRunService.supports` / `unsupportedReason`                           | OK     |
 | `Run.onDidChangeStatus`                           | `CursorRunService.onDidChangeStatus` (+ `streamStatusChanges` helper)       | OK     |
@@ -49,6 +51,16 @@ Mark each row when verified against the **pinned** SDK version in root [`package
 ### Re-exported from `cursor-types`
 
 Helpers and errors such as `AuthenticationError`, `AgentBusyError`, local run stream decoders, `createAgentPlatform`, etc. See [`src/cursor-types.ts`](../src/cursor-types.ts). New SDK exports are **not** automatic: add them here deliberately to avoid semver surprises.
+
+Usage / billing types re-exported for `getUsage`: `AgentUsage`, `RunUsage`, `TokenUsage`, `UsageCost`, `GetUsageOptions`, plus `SDKUsageMessage` and send-option helpers (`AgentModeOption`, `CloudSendOptions`, `LocalSendOptions`).
+
+### Intentionally not wrapped (import from `@cursor/sdk`)
+
+| SDK surface | Notes |
+| ----------- | ----- |
+| `Agent.cancelRun` | Static cancel-by-id; use `CursorRunService.cancel` on a `Run` handle, or call SDK directly |
+| Delta / conversation Zod schemas (`InteractionUpdateSchema`, `NestedTaskUpdateSchema`, `ToolCallDeltaUpdateSchema`, …) | Data-model codecs; import from `@cursor/sdk` when validating stream deltas |
+| `SqliteLocalAgentStore` | Moved to `@cursor/sdk/sqlite` (no longer on the main package export) |
 
 ## Optional audit script
 

@@ -116,7 +116,7 @@ const loadInventory = Effect.gen(function* () {
     },
     { concurrency: "unbounded" },
   ).pipe(
-    Effect.retry(Schedule.exponential("150 millis").pipe(Schedule.both(Schedule.recurs(3)))),
+    Effect.retry(Schedule.exponential("150 millis").pipe(Schedule.upTo({ times: 3 }))),
     Effect.timeout("45 seconds"),
   );
 
