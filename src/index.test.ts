@@ -290,9 +290,7 @@ it.effect("config-based agent methods merge CursorConfig into SDK factory option
 
     const agentLayer = CursorAgentService.Live.pipe(Layer.provide(sdkLayer));
 
-    const agents = yield* Effect.gen(function* () {
-      return yield* CursorAgentService;
-    }).pipe(Effect.provide(agentLayer));
+    const agents = yield* CursorAgentService.pipe(Effect.provide(agentLayer));
 
     yield* agents.create(config, {
       model: { id: "composer-2" },
